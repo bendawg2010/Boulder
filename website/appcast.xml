@@ -8,6 +8,29 @@
     <description>Most recent Boulder releases.</description>
     <language>en</language>
     <item>
+      <title>v1.1.0</title>
+      <pubDate>Tue, 12 May 2026 22:42:00 +0000</pubDate>
+      <sparkle:version>1.1.0</sparkle:version>
+      <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <ul>
+          <li><strong>Boulder shows up in your menubar.</strong> The icon is the actual rock, growing pixel by pixel as you focus — no more emoji placeholder.</li>
+          <li><strong>App blocking.</strong> Pick the apps that break your focus (Slack, Twitter, Discord). Switching to one during a focus session chips 3 pixels off Boulder and posts a notification. 8-second cooldown so a single mis-tab doesn't punish you twice.</li>
+          <li><strong>Settings actually work.</strong> Cmd+, opens a real settings window with launch-at-login, blocked apps, and an About tab.</li>
+          <li><strong>Crumble flash.</strong> Boulder shakes and shows a red -3px counter when your focus breaks.</li>
+          <li><strong>Popover polish.</strong> Live "Focusing" indicator, blocked-apps strip, cleaner tier label.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.1.0/Boulder.dmg"
+        sparkle:version="1.1.0"
+        sparkle:shortVersionString="1.1.0"
+        length="1062363"
+        type="application/octet-stream"
+        sparkle:edSignature="IB6ZuqU9i4yyi9TbjS+H1iovQJfMKF3eB0HH5P/z9qEepbQZsnQreUch3bLAqZHuoo8gWnNDTh558AUbzPAtCA==" />
+    </item>
+    <item>
       <title>v1.0.0</title>
       <pubDate>Tue, 12 May 2026 00:00:00 +0000</pubDate>
       <sparkle:version>1.0.0</sparkle:version>

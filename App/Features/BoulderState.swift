@@ -85,6 +85,11 @@ struct BoulderModel: Codable {
 
     var range: [RetiredBoulder] = []
 
+    /// Apps the user has elected to block during focus sessions.
+    /// Activating one of these while `isFocusing` triggers a crumble
+    /// (see FocusBlocker).
+    var blockedApps: [BlockedApp] = []
+
     var pixelCount: Int { pixels.count }
     var tier: SizeTier { SizeTier.from(pixelCount: pixelCount) }
 

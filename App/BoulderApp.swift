@@ -1,9 +1,13 @@
-// BoulderApp.swift — main entry point.
+// BoulderApp.swift — main entry.
 //
-// Boulder is a menubar-only app (LSUIElement). All UI lives in a
-// popover hung off an NSStatusItem, plus optional standalone windows
-// for the Mountain Range gallery and Settings. SwiftUI renders;
-// AppKit hosts.
+// Boulder is menubar-only (LSUIElement). The Settings scene is
+// intentionally NOT a SwiftUI `Settings { }` block: with LSUIElement
+// the standard showSettingsWindow: selector is unreliable. AppDelegate
+// builds a real NSWindow for settings on demand.
+//
+// We declare a tiny placeholder Settings scene so SwiftUI is satisfied
+// and the menubar Cmd+, key path doesn't crash if it ever fires —
+// the user-facing path goes through AppDelegate.openSettings().
 
 import SwiftUI
 
@@ -12,12 +16,6 @@ struct BoulderApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        // Cmd+, opens Settings. Nothing else mounts a WindowGroup;
-        // the popover and the gallery window are created imperatively
-        // by AppDelegate so we can control activation policy precisely.
-        Settings {
-            SettingsView()
-                .environmentObject(appDelegate.store)
-        }
+        Settings { EmptyView() }
     }
 }

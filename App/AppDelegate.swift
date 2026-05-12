@@ -1,8 +1,8 @@
 // AppDelegate.swift
 //
-// Owns the menubar status item, the popover containing the Boulder
-// view, the gallery window, and the Sparkle updater. Persists the
-// Boulder state on terminate.
+// Owns the menubar status item, popover, settings window, gallery
+// window, focus blocker, and Sparkle updater. Persists state on
+// terminate.
 
 import AppKit
 import SwiftUI
@@ -11,29 +11,41 @@ import Combine
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let store = BoulderStore.shared
     let updater = UpdaterController()
+    private var blocker: FocusBlocker?
 
     var statusItem: NSStatusItem?
     var popover: NSPopover?
+    var settingsWindow: NSWindow?
     var galleryWindow: NSWindow?
 
     private var tickCancellable: AnyCancellable?
+    private var iconCancellable: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // No Dock icon; live in the menubar.
         NSApp.setActivationPolicy(.accessory)
 
         installStatusItem()
         installPopover()
 
-        // Drive the focus session at 1 Hz from a single source so
-        // the UI, the persistence layer, and the growth accumulator
-        // all see the same tick. Boulder grows fractionally per
-        // second; visible pixel changes accumulate slowly on purpose.
+        // 1 Hz tick — drives the focus session.
         tickCancellable = Timer.publish(every: 1.0, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in self?.store.tick() }
 
-        // Kick Sparkle awake.
+        // Refresh the menubar icon whenever the model changes. Throttled
+        // to once a second so heavy pixel growth doesn't repaint the
+        // menubar 60x/s.
+        iconCancellable = store.$model
+            .throttle(for: 1.0, scheduler: DispatchQueue.main, latest: true)
+            .sink { [weak self] model in
+                self?.updateMenubarIcon(pixels: model.pixels)
+            }
+        // Paint once immediately so we don't sit on the placeholder.
+        updateMenubarIcon(pixels: store.model.pixels)
+
+        // Watch for blocked-app activations.
+        blocker = FocusBlocker(store: store)
+
         _ = updater.controller
     }
 
@@ -44,15 +56,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Menubar
 
     private func installStatusItem() {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        let item = NSStatusBar.system.statusItem(withLength: 32)
         if let button = item.button {
-            // Unicode 🪨 looks decent in the menubar; on a real release
-            // we'd swap to a template PDF rendered from the app icon.
-            button.title = "🪨"
+            button.image = MenubarIcon.render(pixels: [])
+            button.image?.isTemplate = false   // colored rock, not a template
+            button.imagePosition = .imageOnly
             button.action = #selector(togglePopover(_:))
             button.target = self
         }
         statusItem = item
+    }
+
+    private func updateMenubarIcon(pixels: [BoulderPixel]) {
+        guard let button = statusItem?.button else { return }
+        let img = MenubarIcon.render(pixels: pixels)
+        img.isTemplate = false
+        button.image = img
     }
 
     @objc func togglePopover(_ sender: Any?) {
@@ -70,7 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func installPopover() {
         let pop = NSPopover()
         pop.behavior = .transient
-        pop.contentSize = NSSize(width: 360, height: 520)
+        pop.contentSize = NSSize(width: 380, height: 560)
         pop.contentViewController = NSHostingController(
             rootView: PopoverContentView()
                 .environmentObject(store)
@@ -79,12 +98,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover = pop
     }
 
+    // MARK: - Settings window
+
+    func openSettings() {
+        if let win = settingsWindow {
+            NSApp.activate(ignoringOtherApps: true)
+            win.makeKeyAndOrderFront(nil)
+            return
+        }
+        let win = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 540),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        win.title = "Boulder Settings"
+        win.center()
+        win.contentView = NSHostingView(
+            rootView: SettingsView()
+                .environmentObject(store)
+                .environmentObject(self)
+        )
+        win.isReleasedWhenClosed = false
+        settingsWindow = win
+        NSApp.activate(ignoringOtherApps: true)
+        win.makeKeyAndOrderFront(nil)
+    }
+
     // MARK: - Gallery window
 
     func openGallery() {
         if let win = galleryWindow {
-            win.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
+            win.makeKeyAndOrderFront(nil)
             return
         }
         let win = NSWindow(
@@ -100,21 +146,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         win.isReleasedWhenClosed = false
         galleryWindow = win
+        NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-    }
-
-    // MARK: - Menu helpers
-
-    func openSettings() {
-        // SwiftUI Settings scene is invoked by sending the standard
-        // showSettingsWindow: / showPreferencesWindow: selector.
-        NSApp.activate(ignoringOtherApps: true)
-        if #available(macOS 14, *) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        } else {
-            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-        }
     }
 
     @objc func quit(_ sender: Any?) {

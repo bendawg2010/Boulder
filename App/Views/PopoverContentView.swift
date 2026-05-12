@@ -1,8 +1,15 @@
 // PopoverContentView.swift
 //
-// The main popover hung off the menubar. Top half: the live Boulder.
-// Bottom half: focus controls (timer, type selector, start/stop) and
-// a footer with gallery + settings + tip links.
+// The popover hung off the menubar 🪨. Layout (top → bottom):
+//   • Tier label + pixel count
+//   • Big Boulder canvas (this is the same rock as in the menubar)
+//   • Tier progress bar
+//   • Focus-type chips
+//   • Timer + Focus/Stop button
+//   • Blocked-apps strip (icons only)
+//   • Footer: Gallery / Release / Settings / Quit
+//
+// On crumble, the entire stage shakes briefly + a red "−N" floats up.
 
 import SwiftUI
 
@@ -10,9 +17,11 @@ struct PopoverContentView: View {
     @EnvironmentObject var store: BoulderStore
     @EnvironmentObject var appDelegate: AppDelegate
 
+    @State private var shake: CGFloat = 0
+    @State private var crumblePop: Bool = false
+
     var body: some View {
         ZStack {
-            // Soft brand-tinted background.
             LinearGradient(
                 colors: [Color(hex: 0x0A0518), Color(hex: 0x1C1338)],
                 startPoint: .top, endPoint: .bottom
@@ -26,30 +35,57 @@ struct PopoverContentView: View {
                     boulderStage
                     Divider().overlay(Color.white.opacity(0.08))
                     controls
+                    blockedAppsStrip
                     footer
                 }
             }
         }
-        .frame(width: 360, height: 520)
+        .frame(width: 380, height: 560)
+        .onChange(of: store.crumbleFlashAt) { _, newValue in
+            guard newValue != nil else { return }
+            playCrumbleAnimation()
+        }
     }
+
+    // MARK: Boulder stage
 
     private var boulderStage: some View {
         VStack(spacing: 4) {
-            HStack {
+            HStack(spacing: 8) {
                 Text(store.model.tier.rawValue)
                     .font(.headline)
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(.white.opacity(0.92))
+                if store.isFocusing {
+                    Circle()
+                        .fill(Color(hex: 0x2EE6A0))
+                        .frame(width: 6, height: 6)
+                        .opacity(0.9)
+                    Text("Focusing")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color(hex: 0x2EE6A0))
+                }
                 Spacer()
                 Text("\(store.model.pixelCount) px")
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.white.opacity(0.55))
             }
             .padding(.horizontal, 16)
             .padding(.top, 14)
 
-            BoulderRenderer(pixels: store.model.pixels)
-                .frame(maxWidth: .infinity)
-                .frame(height: 220)
+            ZStack {
+                BoulderRenderer(pixels: store.model.pixels)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 220)
+                    .offset(x: shake)
+
+                if crumblePop {
+                    Text("−3 px")
+                        .font(.headline.bold())
+                        .foregroundStyle(Color(hex: 0xFF6B6B))
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .padding(.bottom, 70)
+                }
+            }
 
             ProgressView(value: store.model.tierProgress)
                 .progressViewStyle(.linear)
@@ -59,9 +95,24 @@ struct PopoverContentView: View {
         }
     }
 
+    private func playCrumbleAnimation() {
+        // 6 shakes, then settle. Total ≈ 0.4s.
+        let pattern: [CGFloat] = [-8, 7, -6, 5, -3, 2, 0]
+        withAnimation(.easeOut(duration: 0.08)) { crumblePop = true }
+        for (i, dx) in pattern.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05 * Double(i)) {
+                withAnimation(.easeInOut(duration: 0.05)) { shake = dx }
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+            withAnimation(.easeIn(duration: 0.2)) { crumblePop = false }
+        }
+    }
+
+    // MARK: Controls
+
     private var controls: some View {
         VStack(spacing: 14) {
-            // Focus type selector — five pixel chips.
             HStack(spacing: 6) {
                 ForEach(FocusType.allCases) { type in
                     Button {
@@ -71,14 +122,14 @@ struct PopoverContentView: View {
                             Text(type.emoji).font(.system(size: 18))
                             Text(type.rawValue)
                                 .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.8))
+                                .foregroundStyle(.white.opacity(0.85))
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                         .background(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .fill(store.selectedFocusType == type
-                                      ? Color.white.opacity(0.15)
+                                      ? Color.white.opacity(0.16)
                                       : Color.white.opacity(0.05))
                         )
                     }
@@ -89,9 +140,8 @@ struct PopoverContentView: View {
 
             Text(store.selectedFocusType.subtitle)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.45))
+                .foregroundStyle(.white.opacity(0.5))
 
-            // Timer + start/stop.
             HStack(spacing: 12) {
                 Text(formatElapsed(store.sessionElapsed))
                     .font(.system(size: 28, weight: .bold, design: .monospaced))
@@ -118,14 +168,62 @@ struct PopoverContentView: View {
         .padding(.vertical, 14)
     }
 
+    // MARK: Blocked apps strip
+
+    private var blockedAppsStrip: some View {
+        Group {
+            if store.model.blockedApps.isEmpty {
+                Button {
+                    appDelegate.openSettings()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Block apps that break your focus")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.white.opacity(0.45))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+            } else {
+                HStack(spacing: 6) {
+                    Text("Blocking:")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.45))
+                    ForEach(store.model.blockedApps.prefix(6)) { app in
+                        Image(nsImage: app.icon)
+                            .resizable()
+                            .frame(width: 18, height: 18)
+                            .opacity(0.85)
+                    }
+                    if store.model.blockedApps.count > 6 {
+                        Text("+\(store.model.blockedApps.count - 6)")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.45))
+                    }
+                    Spacer()
+                    Button("Edit") { appDelegate.openSettings() }
+                        .buttonStyle(.plain)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.55))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+            }
+        }
+    }
+
+    // MARK: Footer
+
     private var footer: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             footerButton("Gallery") { appDelegate.openGallery() }
             if store.model.canRelease {
                 footerButton("Release →") { store.isReleasing = true }
             }
             Spacer()
-            footerButton("⚙︎") { appDelegate.openSettings() }
+            footerButton("Settings") { appDelegate.openSettings() }
             footerButton("Quit") { appDelegate.quit(nil) }
         }
         .padding(.horizontal, 12)
@@ -138,9 +236,7 @@ struct PopoverContentView: View {
                 .font(.caption.weight(.medium))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(
-                    Capsule().fill(Color.white.opacity(0.07))
-                )
+                .background(Capsule().fill(Color.white.opacity(0.07)))
                 .foregroundStyle(.white.opacity(0.85))
         }
         .buttonStyle(.plain)

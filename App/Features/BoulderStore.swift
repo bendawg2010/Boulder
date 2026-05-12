@@ -32,6 +32,11 @@ final class BoulderStore: ObservableObject {
     /// rolling-off animation, suppresses interaction.
     @Published var isReleasing: Bool = false
 
+    /// Set briefly when FocusBlocker crumbles Boulder. The popover
+    /// reads this to play a shake/flash animation. UI clears it after
+    /// the animation finishes — no persistent UI state.
+    @Published var crumbleFlashAt: Date? = nil
+
     // MARK: Init / persistence
 
     private init() {
@@ -118,6 +123,32 @@ final class BoulderStore: ObservableObject {
         newModel.range = model.range + [retired]
         model = newModel
         isReleasing = false
+        persist()
+    }
+
+    // MARK: Crumble (focus broken)
+
+    /// Remove the most recently-grown pixels from Boulder. Floor is
+    /// zero — we don't go negative. Persists immediately so the
+    /// punishment survives a crash.
+    func crumble(pixels n: Int) {
+        let count = max(0, min(n, model.pixels.count))
+        guard count > 0 else { return }
+        model.pixels.removeLast(count)
+        crumbleFlashAt = Date()
+        persist()
+    }
+
+    // MARK: Blocked apps
+
+    func addBlockedApp(_ app: BlockedApp) {
+        guard !model.blockedApps.contains(where: { $0.bundleIdentifier == app.bundleIdentifier }) else { return }
+        model.blockedApps.append(app)
+        persist()
+    }
+
+    func removeBlockedApp(_ bundleID: String) {
+        model.blockedApps.removeAll { $0.bundleIdentifier == bundleID }
         persist()
     }
 
