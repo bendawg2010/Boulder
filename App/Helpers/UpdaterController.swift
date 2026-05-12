@@ -27,7 +27,7 @@ final class UpdaterController: NSObject, SPUUpdaterDelegate {
     /// a stale 304. Cheap to do; the appcast is tiny.
     func feedURLString(for updater: SPUUpdater) -> String? {
         let base = Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String
-            ?? "https://boulder.pages.dev/appcast.xml"
+            ?? "https://boulder-43p.pages.dev/appcast.xml"
         return base + "?t=\(Int(Date().timeIntervalSince1970))"
     }
 }

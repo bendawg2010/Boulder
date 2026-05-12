@@ -6,7 +6,7 @@ Boulder is an anti-anxiety focus app for macOS. You have a pet rock named Boulde
 
 This subverts the Forest / Focus Friend genre: **no death mechanic, no guilt, no punishment for breaking focus.** Pure slow accretion. The chill productivity app.
 
-→ Live site: [boulder.pages.dev](https://boulder.pages.dev)
+→ Live site: [boulder-43p.pages.dev](https://boulder-43p.pages.dev)
 → Tip: [cash.app/$Dryeetsolutions](https://cash.app/$Dryeetsolutions)
 
 ## Tech

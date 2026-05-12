@@ -4,8 +4,30 @@
      version="2.0">
   <channel>
     <title>Boulder Updates</title>
-    <link>https://boulder.pages.dev/appcast.xml</link>
+    <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <language>en</language>
+    <item>
+      <title>v1.0.0</title>
+      <pubDate>Tue, 12 May 2026 00:00:00 +0000</pubDate>
+      <sparkle:version>1.0.0</sparkle:version>
+      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <ul>
+          <li><strong>Boulder is born.</strong> A pet rock for your focus that can't die — it just grows, one pixel at a time, every minute you focus.</li>
+          <li><strong>Five focus types</strong> — code, write, read, audio, design — each stamps a different texture into your Boulder.</li>
+          <li><strong>Mountain Range gallery</strong> for retired Boulders. Release a Mountain-sized Boulder into the sea; it joins your skyline.</li>
+          <li><strong>Menubar only.</strong> No Dock icon, no nagging, no streak guilt. Truly chill.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.0.0/Boulder.dmg"
+        sparkle:version="1.0.0"
+        sparkle:shortVersionString="1.0.0"
+        length="996392"
+        type="application/octet-stream"
+        sparkle:edSignature="NSABdNbB6X6Afn2SyYL1DUCoGcj2ncTlhZvGCBsw8mMaZeNfn7k4LU86HOjrTPh6hVaDIroJ7gj2XDAd0bupCg==" />
+    </item>
   </channel>
 </rss>
