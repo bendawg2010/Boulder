@@ -60,9 +60,12 @@ struct PopoverContentView: View {
                         .fill(Color(hex: 0x2EE6A0))
                         .frame(width: 6, height: 6)
                         .opacity(0.9)
-                    Text("Focusing")
+                    Text(store.momentumTierLabel)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color(hex: 0x2EE6A0))
+                    Text(String(format: "×%.1f", store.currentMultiplier))
+                        .font(.caption.monospacedDigit().weight(.bold))
+                        .foregroundStyle(Color(hex: 0xFFD960))
                 }
                 Spacer()
                 Text("\(store.model.pixelCount) px")
@@ -73,10 +76,16 @@ struct PopoverContentView: View {
             .padding(.top, 14)
 
             ZStack {
-                BoulderRenderer(pixels: store.model.pixels)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 220)
-                    .offset(x: shake)
+                if store.model.pixels.isEmpty {
+                    emptyState
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 220)
+                } else {
+                    BoulderRenderer(pixels: store.model.pixels)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 220)
+                        .offset(x: shake)
+                }
 
                 if crumblePop {
                     Text("−3 px")
@@ -93,6 +102,29 @@ struct PopoverContentView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 10)
         }
+    }
+
+    // MARK: Empty state
+
+    /// Shown when pixels.isEmpty. A big static 🪨 + a clear prompt
+    /// to press Focus. Replaces the BoulderRenderer entirely so
+    /// the user can't mistake placeholder art for real pixels.
+    private var emptyState: some View {
+        VStack(spacing: 14) {
+            Spacer(minLength: 0)
+            Text("🪨")
+                .font(.system(size: 56))
+                .opacity(0.55)
+            Text("Your Boulder is a pebble.")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.75))
+            Text("Press Focus to start growing it.\nEvery minute you focus, Boulder gains pixels.")
+                .multilineTextAlignment(.center)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.45))
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
     }
 
     private func playCrumbleAnimation() {

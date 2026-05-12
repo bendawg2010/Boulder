@@ -53,18 +53,58 @@ final class BoulderStore: ObservableObject {
         guard isFocusing else { return }
         sessionElapsed += 1
 
-        // Accumulate fractional pixels. Each whole crossing emits a
-        // BoulderPixel placed deterministically based on current
-        // pixel count, focus type, and a per-Boulder seed.
-        model.pixelAccumulator += PIXELS_PER_SECOND
+        // Accumulate fractional pixels at the current momentum rate.
+        // The longer you've been focusing, the more you earn per
+        // second — see sessionMultiplier(elapsed:). Each whole
+        // crossing emits one deterministically-placed BoulderPixel.
+        model.pixelAccumulator += PIXELS_PER_SECOND * currentMultiplier
         while model.pixelAccumulator >= 1.0 {
             model.pixelAccumulator -= 1.0
             emitPixel()
         }
 
-        // Persist every 30s so a crash never loses more than that.
-        if Int(sessionElapsed) % 30 == 0 {
-            persist()
+        if Int(sessionElapsed) % 30 == 0 { persist() }
+    }
+
+    // MARK: Momentum tiers
+
+    /// Multiplier on PIXELS_PER_SECOND based on how long you've been
+    /// continuously focused this session. Ramps from 1.0× at session
+    /// start to 3.0× after one hour, then plateaus. The math:
+    ///
+    ///   ≤ 5 min   →  1.0×   (warm-up)
+    ///   5–15 min  →  1.0× → 1.5×   (linear)
+    ///   15–30 min →  1.5× → 2.0×   (linear)
+    ///   30–60 min →  2.0× → 3.0×   (linear)
+    ///   > 60 min  →  3.0×   (plateau)
+    ///
+    /// Stopping the session resets sessionElapsed → multiplier drops
+    /// to 1.0× on next start. Encourages longer sessions without
+    /// punishing breaks (Boulder doesn't shrink — momentum just
+    /// resets).
+    var currentMultiplier: Double {
+        Self.multiplier(forElapsed: sessionElapsed)
+    }
+
+    static func multiplier(forElapsed t: TimeInterval) -> Double {
+        switch t {
+        case ..<300:    return 1.0
+        case 300..<900: return lerp(1.0, 1.5, t: (t -  300) /  600)
+        case 900..<1800: return lerp(1.5, 2.0, t: (t -  900) /  900)
+        case 1800..<3600: return lerp(2.0, 3.0, t: (t - 1800) / 1800)
+        default:         return 3.0
+        }
+    }
+
+    /// Human-readable name for the current momentum tier — shown
+    /// in the popover so the user sees the system rewarding them.
+    var momentumTierLabel: String {
+        switch sessionElapsed {
+        case ..<300:     return "Warming up"
+        case ..<900:     return "Rolling"
+        case ..<1800:    return "Locked in"
+        case ..<3600:    return "Flow state"
+        default:         return "Deep flow"
         }
     }
 
@@ -157,6 +197,13 @@ final class BoulderStore: ObservableObject {
         for p in pixels { counts[p.type, default: 0] += 1 }
         return counts.max(by: { $0.value < $1.value })?.key
     }
+}
+
+// MARK: - Tiny helpers
+
+private func lerp(_ a: Double, _ b: Double, t: Double) -> Double {
+    let clamped = max(0, min(1, t))
+    return a + (b - a) * clamped
 }
 
 // MARK: - Tiny seeded RNG

@@ -8,6 +8,28 @@
     <description>Most recent Boulder releases.</description>
     <language>en</language>
     <item>
+      <title>v1.2.0</title>
+      <pubDate>Tue, 12 May 2026 22:57:00 +0000</pubDate>
+      <sparkle:version>1.2.0</sparkle:version>
+      <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <ul>
+          <li><strong>Momentum tiers.</strong> The longer you focus in one session, the more pixels per minute you earn. 1× warming up, ramps to 3× after an hour of continuous focus. Stop = reset. No punishment for breaks — just a reward for staying deep.</li>
+          <li><strong>You always see your rock.</strong> Even with zero pixels, the popover shows a starter pebble silhouette. Auto-scales so a 5-pixel Boulder and a 5000-pixel Mountain both feel substantial.</li>
+          <li><strong>Real app icon.</strong> Procedurally generated pixel boulder on a night-sky backdrop. Visible in Finder, the DMG, the About panel.</li>
+          <li><strong>Momentum readout.</strong> "Rolling × 1.5×" in the popover header during focus sessions.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.2.0/Boulder.dmg"
+        sparkle:version="1.2.0"
+        sparkle:shortVersionString="1.2.0"
+        length="1646535"
+        type="application/octet-stream"
+        sparkle:edSignature="uh0QyxRzsc1D4uFg37xmerTpvaLIwksmCSUJHgjpId2FOeRSU8OWdpcWYkMA1fQ5n0bpYWXDrtnXqp0VNShxAw==" />
+    </item>
+    <item>
       <title>v1.1.0</title>
       <pubDate>Tue, 12 May 2026 22:42:00 +0000</pubDate>
       <sparkle:version>1.1.0</sparkle:version>
