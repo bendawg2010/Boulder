@@ -1,0 +1,334 @@
+/* Boulder — promo site styles.
+ *
+ * Vibe: quiet, earthy, with the same drifting-orb gravy backdrop and
+ * gradient hero text as NotchPop / WallPop. Brand palette accents
+ * with a stoney tilt — warm browns and a single hot accent.
+ */
+
+:root {
+  --pink:      #FF6B6B;
+  --magenta:   #C147FF;
+  --blue:      #47A0FF;
+  --mint:      #2EE6A0;
+  --yellow:    #FFD960;
+  --cashgreen: #00D632;
+  --bg:        #06010f;
+  --stone:     #8B7860;
+  --stone-warm:#B5A085;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  line-height: 1.55;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Drifting orb backdrop. */
+body::before, body::after {
+  content: "";
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: -3;
+  opacity: 0.45;
+  animation: orbDrift 22s ease-in-out infinite;
+}
+body::before {
+  width: 60vw; height: 60vw;
+  top: -10vw; right: -15vw;
+  background: radial-gradient(circle, var(--magenta) 0%, transparent 65%);
+}
+body::after {
+  width: 70vw; height: 70vw;
+  bottom: -15vw; left: -20vw;
+  background: radial-gradient(circle, var(--blue) 0%, transparent 65%);
+  animation-delay: -11s;
+}
+@keyframes orbDrift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(8vw, -6vw) scale(1.08); }
+  66% { transform: translate(-6vw, 8vw) scale(0.92); }
+}
+
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---- Nav ---- */
+.nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 36px;
+  position: sticky; top: 0; z-index: 5;
+  backdrop-filter: blur(12px);
+  background: rgba(6, 1, 15, 0.55);
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-rock { font-size: 22px; }
+.brand-name { font-weight: 800; letter-spacing: -0.01em; font-size: 18px; }
+.nav nav { display: flex; gap: 22px; }
+.nav nav a { color: rgba(255,255,255,0.7); font-weight: 500; font-size: 14px; }
+.nav nav a:hover { color: #fff; text-decoration: none; }
+
+/* ---- Hero ---- */
+.hero {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 90px 36px 60px;
+  position: relative;
+  text-align: center;
+}
+.hero-title {
+  font-size: clamp(40px, 8vw, 96px);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+  margin: 0 0 22px;
+}
+.grad-text {
+  background: linear-gradient(90deg, var(--pink), var(--magenta), var(--blue), var(--mint));
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+          color: transparent;
+  animation: gradShift 8s ease-in-out infinite;
+}
+@keyframes gradShift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+.hero-sub {
+  max-width: 640px;
+  margin: 0 auto 28px;
+  font-size: clamp(16px, 1.5vw, 19px);
+  color: rgba(255,255,255,0.78);
+}
+.hero-cta {
+  display: flex; justify-content: center; gap: 14px; flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.hero-meta {
+  font-size: 13px;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 36px;
+}
+.hero-stage {
+  max-width: 640px;
+  margin: 12px auto 0;
+  padding: 14px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 30px 80px rgba(193, 71, 255, 0.18);
+}
+#heroBoulder { width: 100%; height: auto; image-rendering: pixelated; }
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-block;
+  padding: 14px 26px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+  text-decoration: none !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn.primary {
+  background: linear-gradient(135deg, var(--magenta), var(--pink));
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(193, 71, 255, 0.35);
+}
+.btn.ghost {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+.btn.big {
+  padding: 18px 36px;
+  font-size: 17px;
+}
+
+/* ---- How section ---- */
+.how, .why, .cta-block {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 60px 36px;
+}
+.how h2, .why h2, .cta-block h2 {
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-align: center;
+  margin: 0 0 36px;
+}
+.how-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+.how-grid article {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 18px;
+  padding: 28px 24px;
+  text-align: left;
+}
+.how-icon {
+  font-size: 32px;
+  margin-bottom: 14px;
+}
+.how-grid h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 800;
+}
+.how-grid p {
+  margin: 0;
+  color: rgba(255,255,255,0.7);
+  font-size: 15px;
+}
+
+/* ---- Why ---- */
+.why-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.why-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 18px;
+  padding: 26px;
+}
+.why-card h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 800;
+  background: linear-gradient(90deg, var(--yellow), var(--pink));
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.why-card p { margin: 0; color: rgba(255,255,255,0.72); }
+
+/* ---- CTA block ---- */
+.cta-block { text-align: center; }
+.cta-tip {
+  margin-top: 20px;
+  display: flex; justify-content: center; gap: 14px; flex-wrap: wrap;
+}
+.cta-tip a {
+  font-size: 14px;
+  color: rgba(255,255,255,0.6);
+}
+
+/* ---- Footer ---- */
+footer {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding: 30px 36px;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 14px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.55);
+}
+.footer-tip { display: flex; gap: 14px; align-items: center; }
+
+/* Cash App green pill — gravy-standard. */
+.cashapp {
+  background: linear-gradient(135deg, var(--cashgreen), #00B22A);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-weight: 800;
+  color: #fff !important;
+  box-shadow: 0 6px 18px rgba(0, 214, 50, 0.30);
+  text-decoration: none !important;
+  font-size: 13px;
+}
+.cashapp:hover { transform: translateY(-1px); }
+
+/* ---- Download gate modal ---- */
+.dl-gate {
+  position: fixed; inset: 0;
+  background: rgba(6, 1, 15, 0.7);
+  backdrop-filter: blur(14px);
+  z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.dl-gate[hidden] { display: none; }
+.dl-gate-card {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  background: linear-gradient(180deg, #1a1230, #0f0a22);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 22px;
+  padding: 36px 32px 28px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+}
+.dl-gate-close {
+  position: absolute; top: 12px; right: 14px;
+  background: transparent; border: 0;
+  color: rgba(255,255,255,0.55);
+  font-size: 28px; cursor: pointer;
+  line-height: 1;
+}
+.dl-gate-icon { font-size: 32px; margin-bottom: 8px; }
+.dl-gate-title {
+  margin: 0 0 12px;
+  font-size: 24px; font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.dl-gate-lead { margin: 0 0 14px; color: rgba(255,255,255,0.85); }
+.dl-gate-card ol {
+  margin: 0 0 14px;
+  padding-left: 22px;
+  color: rgba(255,255,255,0.78);
+  font-size: 14px;
+}
+.dl-gate-card ol li { margin-bottom: 6px; }
+.dl-gate-note {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
+}
+.dl-gate-btn {
+  display: block;
+  text-align: center;
+  width: 100%;
+  margin-bottom: 16px;
+}
+.dl-gate-btn[data-locked="true"] {
+  opacity: 0.55;
+  pointer-events: none;
+  background: rgba(255,255,255,0.1);
+  box-shadow: none;
+}
+.dl-gate-tip-row {
+  display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
+  font-size: 13px;
+  color: rgba(255,255,255,0.55);
+}
+.cashapp-pill {
+  background: linear-gradient(135deg, var(--cashgreen), #00B22A);
+  color: #fff !important;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  text-decoration: none !important;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 760px) {
+  .how-grid, .why-grid { grid-template-columns: 1fr; }
+  .nav { padding: 16px 20px; }
+  .hero { padding: 56px 20px 40px; }
+  .how, .why, .cta-block { padding: 40px 20px; }
+}
