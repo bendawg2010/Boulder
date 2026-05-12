@@ -5,21 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Boulder — a pet rock for your focus</title>
   <meta name="description" content="An anti-anxiety focus app for macOS. Boulder can't die. It just grows — one pixel at a time, every minute you focus." />
+  <meta name="theme-color" content="#06010f" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
   <meta property="og:title" content="Boulder — a pet rock for your focus" />
-  <meta property="og:description" content="It can't die. It just grows. The chill productivity app." />
+  <meta property="og:description" content="It can't die. It just grows. The chill productivity app for people Forest stresses out." />
   <meta property="og:url" content="https://boulder-43p.pages.dev" />
+  <meta property="og:image" content="https://boulder-43p.pages.dev/og-card.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Boulder — a pet rock for your focus" />
+  <meta name="twitter:description" content="It can't die. It just grows. The chill productivity app for people Forest stresses out." />
+  <meta name="twitter:image" content="https://boulder-43p.pages.dev/og-card.png" />
+
+  <!-- Inline SVG favicon: a tiny pixel boulder -->
+  <link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="%2306010f" rx="3"/><rect x="4" y="9" width="2" height="2" fill="%238B7860"/><rect x="6" y="7" width="2" height="2" fill="%23B5A085"/><rect x="8" y="6" width="2" height="2" fill="%23D9C7A8"/><rect x="10" y="8" width="2" height="2" fill="%238B7860"/><rect x="6" y="9" width="2" height="2" fill="%23B5A085"/><rect x="8" y="8" width="2" height="2" fill="%23B5A085"/><rect x="10" y="10" width="2" height="2" fill="%238B7860"/><rect x="4" y="11" width="8" height="1" fill="%235A4A38"/></svg>' />
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
 <header class="nav">
   <div class="brand">
-    <span class="brand-rock">🪨</span>
+    <span class="brand-rock" aria-hidden="true">🪨</span>
     <span class="brand-name">Boulder</span>
   </div>
   <nav>
-    <a href="#how">How it works</a>
-    <a href="#why">Why</a>
+    <a href="#how" data-spy="how">How</a>
+    <a href="#features" data-spy="features">Features</a>
+    <a href="#why" data-spy="why">Why</a>
     <a href="https://github.com/bendawg2010/Boulder" target="_blank" rel="noopener">GitHub</a>
   </nav>
 </header>
@@ -27,56 +45,118 @@
 <main>
 
   <section class="hero">
-    <h1 class="hero-title">
-      <span class="grad-text">A pet rock</span><br>
-      for your focus.
-    </h1>
-    <p class="hero-sub">
-      Boulder can't die. It just grows — one pixel at a time, every
-      minute you focus. After a year, you've built a small mountain.
-    </p>
-    <div class="hero-cta">
-      <a class="btn primary" href="https://github.com/bendawg2010/Boulder/releases/latest/download/Boulder.dmg" data-download-trigger>↓ Download for macOS</a>
-      <a class="btn ghost" href="#how">See how it works</a>
-    </div>
-    <div class="hero-meta">
-      Free · MIT licensed · ad-hoc signed · macOS 14+
+    <div class="hero-copy">
+      <span class="hero-eyebrow">macOS · free · MIT</span>
+      <h1 class="hero-title">
+        <span class="grad-text">A pet rock</span><br>
+        for your focus.
+      </h1>
+      <p class="hero-sub">
+        Boulder can&rsquo;t die. It just grows &mdash; one pixel at a time,
+        every minute you focus. After a year, you&rsquo;ve built a small mountain.
+      </p>
+      <div class="hero-cta">
+        <a class="btn primary" href="https://github.com/bendawg2010/Boulder/releases/latest/download/Boulder.dmg" data-download-trigger>↓ Download for macOS</a>
+        <a class="btn ghost" href="#trailer">Watch the trailer</a>
+      </div>
+      <div class="hero-meta">
+        Free · MIT licensed · ad-hoc signed · macOS 14+
+      </div>
     </div>
 
-    <div class="hero-stage" aria-hidden="true">
-      <!-- Boulder is rendered in JS as drifting pixels for a hint of the
-           in-app feel. Static decoration only. -->
-      <canvas id="heroBoulder" width="520" height="320"></canvas>
+    <div class="hero-stage" id="trailer">
+      <video
+        class="hero-video"
+        src="boulder-trailer.mp4"
+        autoplay
+        loop
+        muted
+        playsinline
+        preload="auto"
+        poster=""
+        aria-label="Boulder trailer — pixels accreting into a small mountain"
+      ></video>
     </div>
   </section>
 
   <section id="how" class="how">
-    <h2>How Boulder grows</h2>
+    <h2>How it works.</h2>
+    <p class="section-lede">Three steps. No streaks. No shame.</p>
     <div class="how-grid">
       <article>
-        <div class="how-icon">⌨️</div>
-        <h3>Pick what you're focusing on</h3>
-        <p>Code. Write. Read. Audio. Design. Each kind of focus stamps a different texture into your Boulder.</p>
+        <div class="how-icon" aria-hidden="true">⌨️</div>
+        <h3>Pick what you&rsquo;re focusing on</h3>
+        <p>Code, write, read, design — or roll your own custom tag. Each kind of focus stamps a different texture into your Boulder.</p>
       </article>
       <article>
-        <div class="how-icon">🪨</div>
+        <div class="how-icon" aria-hidden="true">🪨</div>
         <h3>Hit Focus. Watch it grow.</h3>
-        <p>Pixel by pixel, in real time. The longer you focus, the bigger Boulder gets. Stop? Boulder pauses. Doesn't shrink.</p>
+        <p>Pixel by pixel, in real time. The longer you focus, the bigger Boulder gets. Stop and Boulder pauses — it doesn&rsquo;t shrink.</p>
       </article>
       <article>
-        <div class="how-icon">🏔️</div>
-        <h3>After 6–12 months: a mountain.</h3>
-        <p>Release it into the sea. It joins your Mountain Range — the panorama of every Boulder you've ever grown.</p>
+        <div class="how-icon" aria-hidden="true">🏔️</div>
+        <h3>After 6&ndash;12 months: a mountain.</h3>
+        <p>Release it into the sea. It joins your Mountain Range — the panorama of every Boulder you&rsquo;ve ever grown.</p>
       </article>
     </div>
   </section>
 
+  <section id="features" class="features">
+    <h2>What&rsquo;s in v1.4.0.</h2>
+    <p class="section-lede">A focus app that respects your time. Shipping today.</p>
+    <ul class="features-grid">
+      <li>
+        <span class="feat-icon" aria-hidden="true">🏷️</span>
+        <div>
+          <h3>Custom tags</h3>
+          <p>Make your own focus categories. Cooking, journaling, whatever. Each one stamps Boulder its own way.</p>
+        </div>
+      </li>
+      <li>
+        <span class="feat-icon" aria-hidden="true">⏳</span>
+        <div>
+          <h3>Commitment sessions</h3>
+          <p>Set a countdown when you mean it. Give up early and pay a small pixel penalty. Stick it out and Boulder rewards you.</p>
+        </div>
+      </li>
+      <li>
+        <span class="feat-icon" aria-hidden="true">🎨</span>
+        <div>
+          <h3>20 shades of granite</h3>
+          <p>Real depth, not a gradient. Every pixel is hand-shaded by the type of focus that made it.</p>
+        </div>
+      </li>
+      <li>
+        <span class="feat-icon" aria-hidden="true">🔍</span>
+        <div>
+          <h3>Click to inspect</h3>
+          <p>Tap any pixel to see what you were focused on the minute you grew it. Boulder is a time map.</p>
+        </div>
+      </li>
+      <li>
+        <span class="feat-icon" aria-hidden="true">🏔️</span>
+        <div>
+          <h3>Mountain Range gallery</h3>
+          <p>Every Boulder you&rsquo;ve ever released lined up in a panorama. Years of focus at a glance.</p>
+        </div>
+      </li>
+      <li>
+        <span class="feat-icon" aria-hidden="true">⚡</span>
+        <div>
+          <h3>Momentum multiplier</h3>
+          <p>Keep coming back. Boulder ramps from 1× up to 3× as your tier builds — without a single guilt-trip notification.</p>
+        </div>
+      </li>
+    </ul>
+  </section>
+
   <section id="why" class="why">
     <h2>The chill productivity app.</h2>
+    <p class="section-lede">Boulder is for people Forest stresses out.</p>
     <div class="why-grid">
       <div class="why-card">
         <h3>No death mechanic.</h3>
-        <p>Forest punishes you. Focus Friend guilts you. Boulder can't die. Break focus and it just pauses — no streak, no shame.</p>
+        <p>Forest punishes you. Focus Friend guilts you. Boulder can&rsquo;t die. Break focus and it just pauses — no streak, no shame.</p>
       </div>
       <div class="why-card">
         <h3>Slow accretion, not pomodoros.</h3>
@@ -88,13 +168,14 @@
       </div>
       <div class="why-card">
         <h3>Open source. Free forever.</h3>
-        <p>MIT licensed. Tip on Cash App if you like it. Star the repo. That's the model.</p>
+        <p>MIT licensed. Tip on Cash App if you like it. Star the repo. That&rsquo;s the whole business model.</p>
       </div>
     </div>
   </section>
 
   <section class="cta-block">
     <h2>Start your pebble.</h2>
+    <p class="section-lede">It can&rsquo;t die. It just grows.</p>
     <a class="btn primary big" href="https://github.com/bendawg2010/Boulder/releases/latest/download/Boulder.dmg" data-download-trigger>↓ Download Boulder</a>
     <div class="cta-tip">
       <a href="https://cash.app/$Dryeetsolutions" target="_blank" rel="noopener" class="cashapp">💸 Tip $5 on Cash App</a>
@@ -106,7 +187,10 @@
 </main>
 
 <footer>
-  <div>© Boulder · MIT licensed · <a href="https://github.com/bendawg2010/Boulder" target="_blank" rel="noopener">open source</a></div>
+  <div class="footer-left">
+    <div>© Boulder · <a href="https://github.com/bendawg2010/Boulder" target="_blank" rel="noopener" class="mit-badge">MIT licensed · open source</a></div>
+    <div class="notchyverse">Part of the Notchyverse · with FocusDex, NotchPop, WallPop.</div>
+  </div>
   <div class="footer-tip">
     <a href="https://cash.app/$Dryeetsolutions" target="_blank" rel="noopener" class="cashapp">💸 Tip $5 on Cash App</a>
     <a href="https://github.com/sponsors/bendawg2010" target="_blank" rel="noopener">Sponsor</a>
@@ -117,19 +201,19 @@
 <div id="dlGate" class="dl-gate" hidden role="dialog" aria-modal="true" aria-labelledby="dlGateTitle">
   <div class="dl-gate-card">
     <button class="dl-gate-close" id="dlGateClose" aria-label="Close">×</button>
-    <div class="dl-gate-icon">⚠️</div>
+    <div class="dl-gate-icon" aria-hidden="true">⚠️</div>
     <h2 class="dl-gate-title" id="dlGateTitle">Before you download</h2>
     <p class="dl-gate-lead">
       <strong>Free + open source · MIT licensed.</strong>
-      macOS will say <em>"Boulder can't be opened"</em> the first time —
+      macOS will say <em>&ldquo;Boulder can&rsquo;t be opened&rdquo;</em> the first time —
       Apple charges <strong>$99/year</strong> for a Developer ID and
       Boulder is free. <a href="https://github.com/bendawg2010/Boulder" target="_blank" rel="noopener">Inspect the source on GitHub.</a>
     </p>
     <ol>
       <li>Drag <strong>Boulder.app</strong> to Applications</li>
-      <li>Open it once → macOS pops <em>"can't be opened"</em> → hit Done</li>
+      <li>Open it once → macOS pops <em>&ldquo;can&rsquo;t be opened&rdquo;</em> → hit Done</li>
       <li><strong>System Settings → Privacy &amp; Security</strong> → scroll → <strong>Open Anyway</strong></li>
-      <li>Reopen → confirm "Open" → Boulder lives in your menubar 🪨</li>
+      <li>Reopen → confirm &ldquo;Open&rdquo; → Boulder lives in your menubar 🪨</li>
     </ol>
     <p class="dl-gate-note">You only do this once. Future updates open normally.</p>
     <a id="dlGateConfirm" class="btn primary dl-gate-btn" href="" data-locked="true">

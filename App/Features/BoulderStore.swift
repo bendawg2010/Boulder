@@ -29,9 +29,14 @@ final class BoulderStore: ObservableObject {
     /// Focus. Captured into the FocusSession on startFocus().
     @Published var draftBlurb: String = ""
 
-    /// User's pre-selected session duration (seconds). nil = open-ended.
-    /// Bound to the duration chip picker. When set, pressing Focus
-    /// starts a committed session — leaving early costs pixels.
+    /// User's pre-selected session duration (seconds).
+    /// - nil  → user hasn't picked anything yet (no chip selected)
+    /// - some(0)   → user explicitly picked Open (no commitment)
+    /// - some(>0)  → committed duration in seconds
+    ///
+    /// We use the 0 sentinel instead of a second nil case so the
+    /// UI can distinguish "nothing picked" from "Open picked" — that
+    /// distinction is what makes the picker not look pre-selected.
     @Published var draftDuration: TimeInterval? = nil
 
     /// The ID of the currently-running FocusSession, if any.
@@ -45,11 +50,32 @@ final class BoulderStore: ObservableObject {
     // MARK: Init / persistence
 
     private init() {
-        let loaded = Persistence.load() ?? BoulderModel()
-        // Tags are user-created — no auto-seeding. The popover shows
-        // a "Create your first tag" prompt when this is empty.
+        var loaded = Persistence.load() ?? BoulderModel()
+        // Migration: pre-v1.4 pixels used a jittered golden-angle
+        // spiral that looked like scattered rubble. v1.4 introduces
+        // BoulderShape — a deterministic dense dome silhouette.
+        // Re-derive every existing pixel's position from its index
+        // so old rocks look solid too. Tag/session attribution is
+        // preserved per pixel; only the (x, y, shade) get updated.
+        if loaded.schemaVersion < 3 {
+            loaded.pixels = Self.reshape(loaded.pixels)
+            loaded.schemaVersion = 3
+        }
         self.model = loaded
         self.selectedTagID = loaded.tags.first?.id ?? UUID()
+    }
+
+    private static func reshape(_ old: [BoulderPixel]) -> [BoulderPixel] {
+        old.enumerated().map { (i, p) -> BoulderPixel in
+            guard i < BoulderShape.cells.count else { return p }
+            let cell = BoulderShape.cells[i]
+            return BoulderPixel(
+                x: cell.x, y: cell.y,
+                tagID: p.tagID, sessionID: p.sessionID,
+                shade: cell.shade,
+                legacyType: p.legacyType
+            )
+        }
     }
 
     func persist() { Persistence.save(model) }
@@ -88,21 +114,13 @@ final class BoulderStore: ObservableObject {
 
     private func emitPixel() {
         let n = model.pixels.count
-        var rng = SeededRNG(seed: UInt64(bitPattern: Int64(n)) &+ UInt64(model.id.hashValue & 0xFFFFFFFF))
-        let radius = sqrt(Double(n)) * 0.95
-        let theta  = Double(n) * 2.39996
-        var x = Int(radius * cos(theta))
-        var y = Int(radius * sin(theta) * 0.55)
-        x += Int(rng.nextDouble() * 3) - 1
-        y += Int(rng.nextDouble() * 3) - 1
-        if y < 0 { y = -y / 2 }
-        let shade = Int(rng.nextDouble() * 4) % 4
-
+        guard n < BoulderShape.cells.count else { return }
+        let cell = BoulderShape.cells[n]
         model.pixels.append(BoulderPixel(
-            x: x, y: y,
+            x: cell.x, y: cell.y,
             tagID: selectedTagID,
             sessionID: currentSessionID,
-            shade: shade
+            shade: cell.shade
         ))
     }
 
@@ -135,10 +153,17 @@ final class BoulderStore: ObservableObject {
     func startFocus() {
         // Refuse to start without a tag — every pixel must be tagged.
         guard model.tags.contains(where: { $0.id == selectedTagID }) else { return }
+        // Treat the 0 sentinel ("Open" chip explicitly picked) and
+        // nil ("no chip picked at all") as the same open-ended case.
+        // Only a strictly-positive draftDuration becomes a commitment.
+        let planned: TimeInterval? = {
+            guard let d = draftDuration, d > 0 else { return nil }
+            return d
+        }()
         let session = FocusSession(
             tagID: selectedTagID,
             blurb: draftBlurb.trimmingCharacters(in: .whitespacesAndNewlines),
-            plannedDuration: draftDuration
+            plannedDuration: planned
         )
         model.sessions.append(session)
         currentSessionID = session.id

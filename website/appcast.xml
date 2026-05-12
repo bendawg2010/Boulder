@@ -8,6 +8,29 @@
     <description>Most recent Boulder releases.</description>
     <language>en</language>
     <item>
+      <title>v1.4.0</title>
+      <pubDate>Tue, 12 May 2026 23:42:00 +0000</pubDate>
+      <sparkle:version>1.4.0</sparkle:version>
+      <sparkle:shortVersionString>1.4.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <ul>
+          <li><strong>Real-looking rock.</strong> Pixels now snap to a dense dome silhouette — every cell is integer-grid-aligned, packed edge-to-edge, lit from above with a 20-shade granite gradient and subtle vein inclusions. No more scattered rubble.</li>
+          <li><strong>Connected silhouette.</strong> The boulder is a single coherent mass at every pixel count, growing wider and taller in proportion as you focus.</li>
+          <li><strong>Per-tag rock tints.</strong> Tags now produce 20 smoothly-interpolated shades capped at low saturation — Granite/Slate/Basalt/Jade/etc. each read as tinted stone, never as a vivid hue.</li>
+          <li><strong>Automatic migration.</strong> Existing rocks are reshaped on first launch — tag and session attribution preserved, only the (x,y,shade) positions update.</li>
+          <li><strong>Pixel-perfect rendering.</strong> Renderer rounds baseline + cell size to integer pixels to kill sub-pixel anti-aliasing seams.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.4.0/Boulder.dmg"
+        sparkle:version="1.4.0"
+        sparkle:shortVersionString="1.4.0"
+        length="2461658"
+        type="application/octet-stream"
+        sparkle:edSignature="8z/hxkSJToD0NFQbyRKMCGyfk3HtkV9SoozNJApYFa9yyEJaxoWbw++N1iH35/yX615C7aLQ4WnF4+r3wNFhCQ==" />
+    </item>
+    <item>
       <title>v1.3.0</title>
       <pubDate>Tue, 12 May 2026 23:10:00 +0000</pubDate>
       <sparkle:version>1.3.0</sparkle:version>

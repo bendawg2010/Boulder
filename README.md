@@ -1,39 +1,159 @@
 # 🪨 Boulder
 
-A pet rock for your focus. It can't die. It just grows.
+**A pet rock for your focus. It can't die. It just grows.**
 
-Boulder is an anti-anxiety focus app for macOS. You have a pet rock named Boulder. Boulder needs nothing. Boulder can't die. But every minute you focus, Boulder grows a fraction of a pixel. After 6 months of focusing, you've built a small mountain. After a year, a landmark.
+[boulder-43p.pages.dev](https://boulder-43p.pages.dev) &nbsp;·&nbsp; [Download Boulder.dmg](https://github.com/bendawg2010/Boulder/releases/latest/download/Boulder.dmg)
 
-This subverts the Forest / Focus Friend genre: **no death mechanic, no guilt, no punishment for breaking focus.** Pure slow accretion. The chill productivity app.
+---
 
-→ Live site: [boulder-43p.pages.dev](https://boulder-43p.pages.dev)
-→ Tip: [cash.app/$Dryeetsolutions](https://cash.app/$Dryeetsolutions)
+## The pitch
 
-## Tech
+You have a pet rock named Boulder. Every minute you focus, Boulder gains pixels. Stop focusing — Boulder pauses. Doesn't shrink. Doesn't die. After six months of real work, you've built a small mountain.
 
-- Swift + SwiftUI + xcodegen (`project.yml` is the source of truth)
-- Sparkle 2.x for auto-updates
-- Ad-hoc signed (`-`) — free, no Developer ID
-- macOS 14+, LSUIElement menubar app
-- MIT licensed
+This is the opposite of Forest: no death mechanic, no guilt, no punishment for breaking focus. Just slow, honest accretion. The rock is the record.
 
-## Build
+---
+
+## Features
+
+**Tags and color**
+- Create custom focus tags — name, emoji, description, and a rock-tint color
+- 12 curated rock presets to choose from: Granite, Slate, Basalt, Sandstone, Limestone, Schist, Jade, Marble, Lapis, Amethyst, Quartz, Hematite
+- Saturation is capped so every tag reads as tinted stone, not neon — the rock always looks like a rock first
+- Pixels are stamped with their tag; click any pixel cluster later to see what you were working on
+
+**Sessions and commitment**
+- Optional session descriptions — write what you're doing before you start, read it back later
+- Commitment mode: pick a duration (15m / 25m / 45m / 1h / Open) to start a countdown timer
+- Give up early on a committed session and lose 25% of pixels earned that session (floor: 5 pixels) — the only punishment in the app, and it's opt-in
+- Finish a committed session and earn a small pixel bonus
+
+**Momentum**
+- The longer you focus in one sitting, the faster Boulder grows
+- 1.0× warming up → 1.5× rolling → 2.0× locked in → 3.0× flow state (caps at 1 hour)
+- Multiplier is continuous, not stepped — it ramps up in real time
+
+**Growth and tiers**
+- Boulder grows at ~300 pixels/hour at 1× (1 pixel every 12 seconds)
+- Five size tiers: Pebble → Stone → Rock → Boulder → Mountain
+- Tier thresholds: 0, 60, 300, 1200, 5000 pixels
+
+**Mountain Range gallery**
+- When Boulder reaches Mountain (5,000 pixels), release it
+- Released Boulders become part of your Mountain Range — a horizontal skyline panorama of every rock you've ever grown
+- Tag palette snapshots are preserved, so old Boulders render correctly even if you later delete their tags
+
+**App blocker**
+- Pick apps in Settings that distract you
+- Switch to one during a focus session: Boulder loses 3 pixels + posts a system notification
+- 8-second cooldown so one fumbled alt-tab doesn't eat a chunk of rock
+- Boulder doesn't try to hide the app — the chip is the mechanic
+
+**Rendering**
+- Dense dome silhouette rendered pixel-by-pixel with a 20-shade granite gradient and directional lighting
+- Menubar icon is the live procedural boulder — not an emoji, the actual rock
+- Pixel positions are deterministic (BoulderShape); rocks look solid from the first pixel
+
+**Infrastructure**
+- Sparkle 2.x auto-updates, EdDSA-signed appcast, public key pinned in project.yml
+- Persistence to `~/Library/Application Support/Boulder/state.json`
+- Launch-at-login via SMAppService
+- macOS 14+, LSUIElement menubar app — no Dock icon
+
+---
+
+## Philosophy
+
+Forest punishes you. Focus Friend guilts you. Pomodoro breaks your flow every 25 minutes whether you want it to or not.
+
+Boulder doesn't care if you stop. It just waits. The only thing it cares about is what you did focus on, and it makes that visible — slowly, permanently, in stone.
+
+No streaks. No daily goals. No shame. Just the rock.
+
+---
+
+## Install
+
+[Download Boulder.dmg](https://github.com/bendawg2010/Boulder/releases/latest/download/Boulder.dmg), drag Boulder.app to Applications, and open it.
+
+**macOS will say "Boulder can't be opened."** This happens because Boulder is ad-hoc signed — Apple charges $99/year for a Developer ID and Boulder is free. It's not malware; you can read every line of source here.
+
+To open it anyway:
+1. Open it once — macOS pops the warning — hit Done
+2. Go to **System Settings → Privacy & Security** → scroll down → click **Open Anyway**
+3. Reopen Boulder and confirm Open
+
+You only do this once. Sparkle updates open normally after that.
+
+---
+
+## Build from source
 
 ```bash
-./scripts/build.sh                  # build Boulder.app
-./scripts/build-dmg.sh              # package as Boulder.dmg
-./scripts/release.sh 1.0.1 "Notes"  # bump version + build + appcast
+./scripts/build.sh                       # xcodegen + xcodebuild → Boulder.app
+./scripts/build-dmg.sh                   # package as Boulder.dmg
+./scripts/release.sh X.Y.Z "Notes"       # bump version + build + sign + appcast
 ```
 
-The first release needs Sparkle's CLI tools vendored at `scripts/sparkle/`. Copy the `bin/` folder from any other gravy project (NotchPop, WallPop). Then generate an EdDSA keypair with `./scripts/sparkle/bin/generate_keys`, paste the public half into `project.yml` (`SUPublicEDKey`).
+Sparkle CLI tools must be at `scripts/sparkle/bin/` — they're already in the repo. To generate a fresh EdDSA keypair: `./scripts/sparkle/bin/generate_keys`, then paste the public half into `project.yml` as `SUPublicEDKey`.
 
-## Deploy site
+`project.yml` is the source of truth. `Info.plist` is generated by xcodegen — don't edit it directly.
+
+---
+
+## Deploy the site
 
 ```bash
-cd website
-npx wrangler pages deploy . --project-name=boulder --branch=main --commit-dirty=true
+cd website && npx wrangler pages deploy . --project-name=boulder --branch=main --commit-dirty=true
 ```
+
+---
+
+## Project structure
+
+```
+Boulder/
+├── App/
+│   ├── BoulderApp.swift          # entry point, app delegate
+│   ├── Features/
+│   │   ├── BoulderState.swift    # model types: BoulderPixel, SizeTier, BoulderModel
+│   │   ├── BoulderStore.swift    # session lifecycle, momentum, persistence
+│   │   ├── BoulderShape.swift    # deterministic dome silhouette renderer
+│   │   ├── FocusTag.swift        # tag model + rock-color palette math
+│   │   ├── FocusSession.swift    # session record stamped on every pixel
+│   │   ├── FocusBlocker.swift    # app-switch watcher + pixel crumble
+│   │   ├── MenubarIcon.swift     # live procedural rock in the menubar
+│   │   └── MountainRangeView.swift  # retired boulder gallery
+│   ├── Views/                    # SwiftUI popover + settings UI
+│   └── Helpers/                  # persistence, SMAppService, utilities
+├── scripts/
+│   ├── build.sh
+│   ├── build-dmg.sh
+│   ├── release.sh
+│   └── sparkle/bin/              # Sparkle CLI tools (sign_update, generate_keys)
+├── website/                      # Cloudflare Pages promo site
+├── trailer/                      # Remotion (TypeScript + React) trailer
+└── project.yml                   # xcodegen config — source of truth for version + keys
+```
+
+---
 
 ## Notchyverse
 
-Boulder is canon in the Notchyverse alongside FocusDex, SkyJournal, Campfire, NotchPop, WallPop. FocusDex players who also use Boulder unlock the Pebblekin → Boulderkin creature line.
+Boulder is part of a small indie universe alongside FocusDex, NotchPop, and WallPop.
+
+---
+
+## Tip jar
+
+Boulder is free. If it's useful:
+
+- [Cash App $Dryeetsolutions](https://cash.app/$Dryeetsolutions)
+- [GitHub Sponsors](https://github.com/sponsors/bendawg2010)
+- [Star the repo](https://github.com/bendawg2010/Boulder) — it helps
+
+---
+
+## License
+
+MIT

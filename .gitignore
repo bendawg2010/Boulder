@@ -18,3 +18,8 @@ App/Info.plist
 # IDE
 .vscode/
 .idea/
+
+# Remotion trailer artifacts
+trailer/node_modules/
+trailer/out/
+trailer/.remotion/

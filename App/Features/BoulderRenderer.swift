@@ -66,14 +66,23 @@ struct BoulderRenderer: View {
     // MARK: Geometry
 
     private func layout(in size: CGSize) -> (cell: CGFloat, cx: CGFloat, baselineY: CGFloat) {
-        let centerX = size.width / 2
-        let baselineY = size.height - (groundLine ? 18 : 4)
+        // Snap baseline + center to integer pixels so adjacent cells
+        // share crisp edges instead of getting anti-aliased into a
+        // dotty mess.
+        let centerX = (size.width / 2).rounded()
+        let baselineY = (size.height - (groundLine ? 18 : 4)).rounded()
         let effectiveN = max(50, pixels.count)
+        // Pick a cell size proportional to the rock's expected radius
+        // so the boulder fills ~60% of the canvas at every size, then
+        // ROUND to an integer so cells pack edge-to-edge without
+        // sub-pixel seams. Floor of 2 — anything smaller turns the
+        // dome into anti-aliased fuzz.
         let targetRadius = min(size.width, size.height * 1.6) * 0.32
-        let resolved: CGFloat = autoScale
-            ? max(2.5, min(10, targetRadius / CGFloat(sqrt(Double(effectiveN)))))
+        let rawCell: CGFloat = autoScale
+            ? max(2, min(10, targetRadius / CGFloat(sqrt(Double(effectiveN)))))
             : cellSize
-        return (resolved, centerX, baselineY)
+        let resolved = rawCell.rounded()
+        return (max(1, resolved), centerX, baselineY)
     }
 
     private func rectFor(_ p: BoulderPixel, cell: CGFloat, cx: CGFloat, baselineY: CGFloat) -> CGRect {

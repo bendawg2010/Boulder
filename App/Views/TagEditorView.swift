@@ -24,7 +24,10 @@ struct TagEditorView: View {
         _name  = State(initialValue: existing?.name  ?? "")
         _emoji = State(initialValue: existing?.emoji ?? "🪨")
         _blurb = State(initialValue: existing?.blurb ?? "")
-        _hue   = State(initialValue: existing?.hue   ?? Double.random(in: 0...1))
+        // Default a brand-new tag to a random rock preset (not a
+        // random hue) — keeps the aesthetic locked from creation.
+        _hue   = State(initialValue: existing?.hue
+                       ?? FocusTag.rockPresets.randomElement()!.hue)
     }
 
     var body: some View {
@@ -72,20 +75,15 @@ struct TagEditorView: View {
                     .font(.body)
             }
             Section {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Color")
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Rock type")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    HStack(spacing: 0) {
-                        ForEach(0..<24, id: \.self) { i in
-                            Rectangle()
-                                .fill(Color(hue: Double(i) / 24, saturation: 0.7, brightness: 0.85))
-                                .frame(height: 14)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                        ForEach(FocusTag.rockPresets) { preset in
+                            rockButton(preset)
                         }
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .opacity(0.7)
-                    Slider(value: $hue, in: 0...1)
                 }
             }
         }
@@ -112,6 +110,33 @@ struct TagEditorView: View {
             .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .padding(12)
+    }
+
+    /// Swatch button for one of the rock presets. Tapping snaps the
+    /// tag's hue to this preset; we don't allow the user to dial in
+    /// arbitrary hues, so the palette stays rock-like by construction.
+    private func rockButton(_ preset: RockPreset) -> some View {
+        let isSelected = abs(hue - preset.hue) < 0.0001
+        return Button {
+            withAnimation(.easeOut(duration: 0.15)) { hue = preset.hue }
+        } label: {
+            VStack(spacing: 4) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(preset.swatch)
+                        .frame(height: 28)
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.white, lineWidth: 2)
+                            .frame(height: 28)
+                    }
+                }
+                Text(preset.name)
+                    .font(.caption2.weight(isSelected ? .bold : .regular))
+                    .foregroundStyle(isSelected ? .primary : .secondary)
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private var previewPalette: [Color] {

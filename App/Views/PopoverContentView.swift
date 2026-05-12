@@ -291,27 +291,24 @@ struct PopoverContentView: View {
     // MARK: Duration picker
 
     /// Pre-commit chips. "Open" = no duration (just focus, stop when
-    /// you want). Anything else = committed session with countdown +
-    /// give-up penalty.
-    private let durationOptions: [(label: String, seconds: TimeInterval?)] = [
+    /// you want), encoded as seconds=0 so we can distinguish "user
+    /// explicitly picked Open" from "user hasn't picked anything".
+    private let durationOptions: [(label: String, seconds: TimeInterval)] = [
         ("15 m",   15 * 60),
         ("25 m",   25 * 60),
         ("45 m",   45 * 60),
         ("1 h",    60 * 60),
-        ("90 m",   90 * 60),
-        ("Open",   nil)
+        ("Open",   0)
     ]
 
     private var durationPicker: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                Text(store.isFocusing
-                     ? "Committed to"
-                     : "Commit to a duration")
+                Text(durationPickerHeading)
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.45))
                 Spacer()
-                if !store.isFocusing && store.draftDuration != nil {
+                if !store.isFocusing, let d = store.draftDuration, d > 0 {
                     Image(systemName: "lock.fill")
                         .font(.caption2)
                         .foregroundStyle(Color(hex: 0xFFD960))
@@ -327,29 +324,45 @@ struct PopoverContentView: View {
         .padding(.top, 4)
     }
 
-    private func durationChip(label: String, seconds: TimeInterval?) -> some View {
+    private var durationPickerHeading: String {
+        if store.isFocusing {
+            if let d = store.session(forID: store.currentSessionID)?.plannedDuration, d > 0 {
+                return "Committed to"
+            }
+            return "Open session"
+        }
+        return "Pick a duration (optional)"
+    }
+
+    private func durationChip(label: String, seconds: TimeInterval) -> some View {
         let isSelected: Bool
         if store.isFocusing {
-            isSelected = (store.session(forID: store.currentSessionID)?.plannedDuration == seconds)
+            let committed = store.session(forID: store.currentSessionID)?.plannedDuration ?? 0
+            isSelected = (committed == seconds)
         } else {
             isSelected = (store.draftDuration == seconds)
         }
         return Button {
-            store.draftDuration = seconds
+            // Toggle off if tapping the already-selected chip — lets
+            // the user back out without picking a different option.
+            if store.draftDuration == seconds {
+                store.draftDuration = nil
+            } else {
+                store.draftDuration = seconds
+            }
         } label: {
             Text(label)
                 .font(.caption.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, minHeight: 30)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
                         .fill(isSelected
-                              ? Color(hex: 0xFFD960).opacity(0.18)
+                              ? Color(hex: 0xFFD960).opacity(0.20)
                               : Color.white.opacity(0.05))
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(isSelected ? Color(hex: 0xFFD960).opacity(0.5) : .clear,
-                                        lineWidth: 1)
+                                .stroke(isSelected ? Color(hex: 0xFFD960).opacity(0.6) : .clear,
+                                        lineWidth: 1.5)
                         )
                 )
                 .foregroundStyle(isSelected ? Color(hex: 0xFFD960) : .white.opacity(0.7))

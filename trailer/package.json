@@ -1,0 +1,20 @@
+{
+  "name": "boulder-trailer",
+  "version": "1.0.0",
+  "description": "30-second Remotion trailer for Boulder",
+  "scripts": {
+    "start": "remotion studio",
+    "build": "remotion render BoulderTrailer out/boulder-trailer.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.4.0"
+  }
+}
