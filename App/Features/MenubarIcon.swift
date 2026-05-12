@@ -10,11 +10,20 @@
 // popover.
 
 import AppKit
+import SwiftUI
 
 enum MenubarIcon {
     /// Returns a non-template image (we want the color). Sized to
     /// 22pt height — the standard NSStatusBar icon size.
-    static func render(pixels: [BoulderPixel]) -> NSImage {
+    /// `paletteFor` resolves each pixel to a palette — pass the
+    /// store's tag-aware resolver so the menubar icon stays in sync
+    /// with the tag colors.
+    static func render(
+        pixels: [BoulderPixel],
+        paletteFor: (BoulderPixel) -> [Color] = { p in
+            p.legacyType?.palette ?? BoulderRenderer.fallbackPalette
+        }
+    ) -> NSImage {
         let height: CGFloat = 22
         let width:  CGFloat = 28   // a touch wider than tall — boulders are wide
         let size = NSSize(width: width, height: height)
@@ -49,7 +58,7 @@ enum MenubarIcon {
             let y = baseline - CGFloat(p.y) * cell - cell
             if y < -cell || y > height { continue }
             if x < -cell || x > width  { continue }
-            let palette = p.type.palette
+            let palette = paletteFor(p)
             let shade = palette[max(0, min(palette.count - 1, p.shade))]
             NSColor(shade).set()
             NSBezierPath(rect: NSRect(x: x, y: y, width: cell, height: cell)).fill()

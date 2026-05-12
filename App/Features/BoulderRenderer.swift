@@ -1,72 +1,114 @@
 // BoulderRenderer.swift
 //
 // SwiftUI Canvas that paints a BoulderModel as chunky pixel art.
-// Pure function of `pixels` — no animation state of its own. Used by
-// the popover (live), the gallery (frozen silhouettes), and the
-// release ceremony (translated off-screen).
+// Pixel colors come from the store's tag library: each pixel carries
+// a `tagID` which the store resolves to a 4-color palette. Legacy
+// pixels (pre-v1.3.0) fall back to FocusType.palette.
 //
-// When `pixels` is empty, the renderer draws NOTHING (not even a
-// placeholder pebble). The PopoverContentView shows a clear
-// "press Focus" empty state in its place — much less confusing than
-// painting fake pixels when the user has zero.
+// Empty-state behavior: the renderer draws nothing when pixels is
+// empty — the popover shows a clear "Press Focus" empty state in
+// its place.
 //
-// Auto-scale floors the pixel-count input at ~50 so the cell size
-// doesn't pop when going from 1 → 2 → 3 real pixels.
+// Click-to-inspect: callers can pass a `.onTap` handler that receives
+// the pixel index nearest the tap location. Used by the popover to
+// show what session a pixel cluster came from.
 
 import SwiftUI
 
 struct BoulderRenderer: View {
     let pixels: [BoulderPixel]
+    /// Closure that resolves a pixel to its palette. Wired by the
+    /// caller (usually `store.palette(for:)`) so this view doesn't
+    /// need to know about BoulderStore.
+    var paletteFor: (BoulderPixel) -> [Color] = { p in
+        p.legacyType?.palette ?? BoulderRenderer.fallbackPalette
+    }
 
-    /// Side length in points of a single "pixel" cell. Ignored when
-    /// `autoScale` is true.
     var cellSize: CGFloat = 4
-
-    /// When true, the renderer picks a cell size based on pixel count
-    /// so the rock fills roughly 60% of the canvas regardless of how
-    /// many pixels it has. Use in the popover; turn off for gallery
-    /// thumbnails where all retired Boulders should share a scale.
     var autoScale: Bool = true
-
-    /// Drawn at the bottom of the canvas — Boulder sits ON ground.
     var groundLine: Bool = true
 
+    /// Optional tap handler. Receives the pixel array index nearest
+    /// the tap point, or nil if the tap missed every pixel.
+    var onPixelTap: ((Int?) -> Void)? = nil
+
+    @State private var lastSize: CGSize = .zero
+
     var body: some View {
-        Canvas { ctx, size in
-            guard !pixels.isEmpty else { return }
+        GeometryReader { geo in
+            Canvas { ctx, size in
+                guard !pixels.isEmpty else { return }
+                let (cell, cx, baselineY) = layout(in: size)
 
-            let centerX = size.width / 2
-            let baselineY = size.height - (groundLine ? 18 : 4)
+                if groundLine {
+                    var dust = Path()
+                    dust.move(to: CGPoint(x: 8, y: baselineY + cell * 0.5))
+                    dust.addLine(to: CGPoint(x: size.width - 8, y: baselineY + cell * 0.5))
+                    ctx.stroke(dust, with: .color(Color.white.opacity(0.12)), lineWidth: 1)
+                }
 
-            // Auto-scale: pick a cell size that keeps the rock at a
-            // stable visual footprint regardless of pixel count. Floor
-            // the effective count at 50 so the first few real pixels
-            // don't suddenly explode to oversized cells.
-            let effectiveN = max(50, pixels.count)
-            let targetRadius = min(size.width, size.height * 1.6) * 0.32
-            let resolved: CGFloat = autoScale
-                ? max(2.5, min(10, targetRadius / CGFloat(sqrt(Double(effectiveN)))))
-                : cellSize
-
-            if groundLine {
-                var dust = Path()
-                dust.move(to: CGPoint(x: 8, y: baselineY + resolved * 0.5))
-                dust.addLine(to: CGPoint(x: size.width - 8, y: baselineY + resolved * 0.5))
-                ctx.stroke(dust, with: .color(Color.white.opacity(0.12)), lineWidth: 1)
+                for p in pixels {
+                    let rect = rectFor(p, cell: cell, cx: cx, baselineY: baselineY)
+                    let palette = paletteFor(p)
+                    let color = palette[max(0, min(palette.count - 1, p.shade))]
+                    ctx.fill(Path(rect), with: .color(color))
+                }
             }
-
-            for p in pixels {
-                let rect = CGRect(
-                    x: centerX + CGFloat(p.x) * resolved - resolved / 2,
-                    y: baselineY - CGFloat(p.y) * resolved - resolved,
-                    width: resolved,
-                    height: resolved
-                )
-                let palette = p.type.palette
-                let color = palette[max(0, min(palette.count - 1, p.shade))]
-                ctx.fill(Path(rect), with: .color(color))
+            .drawingGroup()
+            .contentShape(Rectangle())
+            .onTapGesture { location in
+                guard let onPixelTap, !pixels.isEmpty else { return }
+                onPixelTap(nearestPixelIndex(to: location, in: geo.size))
             }
         }
-        .drawingGroup()
     }
+
+    // MARK: Geometry
+
+    private func layout(in size: CGSize) -> (cell: CGFloat, cx: CGFloat, baselineY: CGFloat) {
+        let centerX = size.width / 2
+        let baselineY = size.height - (groundLine ? 18 : 4)
+        let effectiveN = max(50, pixels.count)
+        let targetRadius = min(size.width, size.height * 1.6) * 0.32
+        let resolved: CGFloat = autoScale
+            ? max(2.5, min(10, targetRadius / CGFloat(sqrt(Double(effectiveN)))))
+            : cellSize
+        return (resolved, centerX, baselineY)
+    }
+
+    private func rectFor(_ p: BoulderPixel, cell: CGFloat, cx: CGFloat, baselineY: CGFloat) -> CGRect {
+        CGRect(
+            x: cx + CGFloat(p.x) * cell - cell / 2,
+            y: baselineY - CGFloat(p.y) * cell - cell,
+            width: cell, height: cell
+        )
+    }
+
+    /// Linear scan — fine for any practical Boulder size. Returns
+    /// the index of the pixel whose drawn rect contains `loc`, or
+    /// the nearest pixel within a tap-tolerance radius.
+    private func nearestPixelIndex(to loc: CGPoint, in size: CGSize) -> Int? {
+        let (cell, cx, baselineY) = layout(in: size)
+        // First pass: exact-hit.
+        for (i, p) in pixels.enumerated().reversed() {
+            if rectFor(p, cell: cell, cx: cx, baselineY: baselineY).contains(loc) {
+                return i
+            }
+        }
+        // Fall back: nearest within ~2 cells.
+        var bestIdx: Int? = nil
+        var bestDist: CGFloat = cell * 3
+        for (i, p) in pixels.enumerated() {
+            let r = rectFor(p, cell: cell, cx: cx, baselineY: baselineY)
+            let center = CGPoint(x: r.midX, y: r.midY)
+            let d = hypot(center.x - loc.x, center.y - loc.y)
+            if d < bestDist { bestDist = d; bestIdx = i }
+        }
+        return bestIdx
+    }
+
+    static let fallbackPalette: [Color] = [
+        Color(white: 0.18), Color(white: 0.35),
+        Color(white: 0.55), Color(white: 0.80)
+    ]
 }

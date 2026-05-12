@@ -50,15 +50,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        store.persist()
+        // If the user is mid-commitment when they quit, count it as
+        // a give-up so they can't dodge the penalty by force-quitting.
+        // Falls through to a normal persist for open-ended sessions.
+        MainActor.assumeIsolated { store.handleQuitDuringSession() }
     }
 
     // MARK: - Menubar
 
+    @MainActor
     private func installStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: 32)
         if let button = item.button {
-            button.image = MenubarIcon.render(pixels: [])
+            button.image = MenubarIcon.render(pixels: [], paletteFor: { [weak self] in
+                self?.store.palette(for: $0) ?? BoulderRenderer.fallbackPalette
+            })
             button.image?.isTemplate = false   // colored rock, not a template
             button.imagePosition = .imageOnly
             button.action = #selector(togglePopover(_:))
@@ -67,11 +73,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = item
     }
 
+    @MainActor
     private func updateMenubarIcon(pixels: [BoulderPixel]) {
         guard let button = statusItem?.button else { return }
-        let img = MenubarIcon.render(pixels: pixels)
+        let img = MenubarIcon.render(pixels: pixels, paletteFor: { [weak self] in
+            self?.store.palette(for: $0) ?? BoulderRenderer.fallbackPalette
+        })
         img.isTemplate = false
         button.image = img
+        // Tooltip: human-readable status. Helps the user remember
+        // there's a rock living in their menubar and what tier it is.
+        button.toolTip = "Boulder · \(store.model.tier.rawValue) · \(store.model.pixelCount) px"
     }
 
     @objc func togglePopover(_ sender: Any?) {

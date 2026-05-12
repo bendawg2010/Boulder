@@ -1,8 +1,9 @@
 // MountainRangeView.swift
 //
-// The horizontal panorama of every Boulder you've ever released.
-// Each retired Boulder draws as a small frozen silhouette, in order.
-// Together they form your mountain range — the skyline of your years.
+// Horizontal panorama of every retired Boulder. Each thumbnail
+// renders frozen pixels colored from the tag snapshot taken at
+// release time, so historical Boulders display correctly even after
+// the user has edited or deleted tags in the live library.
 
 import SwiftUI
 
@@ -11,7 +12,6 @@ struct MountainRangeView: View {
 
     var body: some View {
         ZStack {
-            // Sky → sea gradient backdrop.
             LinearGradient(
                 colors: [
                     Color(hex: 0x06010F),
@@ -35,8 +35,14 @@ struct MountainRangeView: View {
                     HStack(alignment: .bottom, spacing: 28) {
                         ForEach(store.model.range) { rb in
                             VStack(spacing: 6) {
-                                BoulderRenderer(pixels: rb.pixels, cellSize: 1.5, groundLine: false)
-                                    .frame(width: 220, height: 220)
+                                BoulderRenderer(
+                                    pixels: rb.pixels,
+                                    paletteFor: { p in palette(for: p, in: rb) },
+                                    cellSize: 1.5,
+                                    autoScale: false,
+                                    groundLine: false
+                                )
+                                .frame(width: 220, height: 220)
                                 Text(formatRange(rb))
                                     .font(.caption2)
                                     .foregroundStyle(.white.opacity(0.55))
@@ -48,6 +54,16 @@ struct MountainRangeView: View {
                 }
             }
         }
+    }
+
+    /// Look up a pixel's color in the retired Boulder's tag snapshot,
+    /// falling back to legacyType then a neutral grey.
+    private func palette(for pixel: BoulderPixel, in rb: RetiredBoulder) -> [Color] {
+        if let id = pixel.tagID, let tag = rb.tagSnapshot.first(where: { $0.id == id }) {
+            return tag.palette
+        }
+        if let t = pixel.legacyType { return t.palette }
+        return BoulderRenderer.fallbackPalette
     }
 
     private func formatRange(_ rb: RetiredBoulder) -> String {

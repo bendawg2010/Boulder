@@ -8,6 +8,31 @@
     <description>Most recent Boulder releases.</description>
     <language>en</language>
     <item>
+      <title>v1.3.0</title>
+      <pubDate>Tue, 12 May 2026 23:10:00 +0000</pubDate>
+      <sparkle:version>1.3.0</sparkle:version>
+      <sparkle:shortVersionString>1.3.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <ul>
+          <li><strong>You make your own tags.</strong> First launch starts empty; you create the categories that matter to YOU with a name, emoji, color, and description.</li>
+          <li><strong>Commitment sessions.</strong> Pre-select 15m / 25m / 45m / 1h / 90m / Open. Committed sessions count DOWN and earn a small bonus on completion. Giving up early chips 25% of session pixels off Boulder.</li>
+          <li><strong>Session descriptions</strong> stamped onto every pixel you earn. Click a pixel later → see what you were doing.</li>
+          <li><strong>Pixel inspector</strong> — tap your rock to surface the session that grew the pixel cluster you tapped (tag, description, date, gave-up flag).</li>
+          <li><strong>Tag library</strong> in Settings → Tags. Hue slider for color, palette preview, edit/delete.</li>
+          <li><strong>Force-quit-safe commitment.</strong> Quitting Boulder mid-commitment counts as a give-up — no backdoor escape.</li>
+          <li><strong>Honest note:</strong> macOS won't let an indie app system-lock you out of your computer. Boulder builds commitment through pixel stakes instead.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.3.0/Boulder.dmg"
+        sparkle:version="1.3.0"
+        sparkle:shortVersionString="1.3.0"
+        length="1804910"
+        type="application/octet-stream"
+        sparkle:edSignature="HNTizVQn6uuFOqg7f+ihn7GFNtSsDUgL+IVHY70hzTMB750+EjUt5aA9cbSzkXZP2OxjDgwbS0UpaMqM+oCNAA==" />
+    </item>
+    <item>
       <title>v1.2.0</title>
       <pubDate>Tue, 12 May 2026 22:57:00 +0000</pubDate>
       <sparkle:version>1.2.0</sparkle:version>

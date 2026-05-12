@@ -28,11 +28,16 @@ struct ReleaseCeremonyView: View {
                 ).ignoresSafeArea()
 
                 // The rolling Boulder.
-                BoulderRenderer(pixels: store.model.pixels, cellSize: 2.5)
-                    .frame(width: 240, height: 240)
-                    .rotationEffect(rollRotation)
-                    .offset(x: rollOffset, y: 40)
-                    .opacity(fadeOut)
+                BoulderRenderer(
+                    pixels: store.model.pixels,
+                    paletteFor: { store.palette(for: $0) },
+                    cellSize: 2.5,
+                    autoScale: false
+                )
+                .frame(width: 240, height: 240)
+                .rotationEffect(rollRotation)
+                .offset(x: rollOffset, y: 40)
+                .opacity(fadeOut)
 
                 // Splash burst.
                 Circle()
@@ -43,9 +48,9 @@ struct ReleaseCeremonyView: View {
                     .position(x: geo.size.width - 40, y: geo.size.height - 80)
 
                 if showPebble {
-                    BoulderRenderer(pixels: [], cellSize: 4)
+                    Text("🪨")
+                        .font(.system(size: 36))
                         .frame(width: 80, height: 80)
-                        .overlay(Text("🪨").font(.system(size: 28)))
                         .transition(.opacity)
                 }
             }
