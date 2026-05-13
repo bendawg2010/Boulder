@@ -12,9 +12,12 @@ import Foundation
 import SwiftUI
 
 /// Rate at which a running focus session emits pixels into Boulder
-/// (before the momentum multiplier). 1 / 12 ≈ a pixel every 12 seconds
-/// at 1.0× → ~300 pixels per hour at full focus.
-let PIXELS_PER_SECOND: Double = 1.0 / 12.0
+/// (before the momentum multiplier). 1 / 300 = one pixel every 5
+/// minutes at 1.0× — slow, deliberate accretion that adds up to
+/// roughly a Mountain over 6 months at ~1.5 hours of focus per day.
+/// Momentum tier multiplier (1× → 3×) speeds this up during long
+/// sessions but never to the point where it feels arcade-fast.
+let PIXELS_PER_SECOND: Double = 1.0 / 300.0
 
 /// One generated pixel. Position is in a normalized unit grid; the
 /// renderer scales to the current size tier on draw.

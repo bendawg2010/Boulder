@@ -46,6 +46,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Watch for blocked-app activations.
         blocker = FocusBlocker(store: store)
 
+        // FocusBlocker can't reach the popover directly — listen for
+        // its "show yourself" signal and pop the popover so the user
+        // sees the crumble flash immediately.
+        NotificationCenter.default.addObserver(
+            forName: .boulderShowPopover,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.showPopoverFromAnywhere() }
+        }
+
         _ = updater.controller
     }
 
@@ -94,6 +105,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
+    }
+
+    /// Force the popover open from a non-UI caller (e.g. FocusBlocker
+    /// when a blocked app is activated). Idempotent — no-op if already
+    /// shown.
+    func showPopoverFromAnywhere() {
+        guard let popover, let button = statusItem?.button else { return }
+        if popover.isShown { return }
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        popover.contentViewController?.view.window?.makeKey()
     }
 
     // MARK: - Popover

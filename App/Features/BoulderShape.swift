@@ -70,8 +70,14 @@ enum BoulderShape {
                 // Noise: ±2 shades per cell for organic texture.
                 var s = 4.0 + yNorm * 13.0
                 s -= xNorm * xNorm * 4.0
-                // Deterministic hash noise from (x,y).
-                let h = UInt32(bitPattern: Int32(x &* 73856093 ^ y &* 19349663))
+                // Deterministic hash noise from (x,y). MUST truncate to
+                // UInt32 BEFORE multiplying — otherwise `Int(64-bit) &*
+                // 73856093` produces values up to 5.4B that trap when
+                // squeezed into Int32. (Same bug we fixed in
+                // scripts/make-icon.sh; main-app was missed.)
+                let xu = UInt32(bitPattern: Int32(truncatingIfNeeded: x))
+                let yu = UInt32(bitPattern: Int32(truncatingIfNeeded: y))
+                let h: UInt32 = (xu &* UInt32(73856093)) ^ (yu &* UInt32(19349663))
                 let n = (Double(h % 1000) / 1000.0 - 0.5) * 2.4
                 s += n
                 let shade = max(0, min(Self.shadeLevels - 1, Int(s.rounded())))
