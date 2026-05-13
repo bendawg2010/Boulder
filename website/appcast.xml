@@ -8,6 +8,25 @@
     <description>Most recent Boulder releases.</description>
     <language>en</language>
     <item>
+      <title>v1.4.7</title>
+      <pubDate>Wed, 13 May 2026 05:10:00 +0000</pubDate>
+      <sparkle:version>1.4.7</sparkle:version>
+      <sparkle:shortVersionString>1.4.7</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <ul>
+          <li><strong>2-minute give-up grace period.</strong> Started a session by accident? You have 120 seconds to give up at zero cost. After that, give-up forfeits only your pending pixel escrow — never pixels already on the rock. The "floor of 5" crumble is gone.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.4.7/Boulder.dmg"
+        sparkle:version="1.4.7"
+        sparkle:shortVersionString="1.4.7"
+        length="2133060"
+        type="application/octet-stream"
+        sparkle:edSignature="jRbYHWNTscePfN3p+bdfWaMz7CKO1Evt3Ct49t/dLu2Kf3T4udS+RPB4kyqDTj1nJJt3aQ2g0AWosJaGzcupBw==" />
+    </item>
+    <item>
       <title>v1.4.6</title>
       <pubDate>Wed, 13 May 2026 04:50:00 +0000</pubDate>
       <sparkle:version>1.4.6</sparkle:version>

@@ -252,31 +252,41 @@ final class BoulderStore: ObservableObject {
         }
     }
 
-    /// Number of pixels a give-up costs RIGHT NOW. Equals the
-    /// pendingPixelCount earned during this session (which never made
-    /// it onto the rock because we hold them until stop). Give up =
-    /// forfeit the entire escrow. Floor 5 so a 30-second tap-Focus-
-    /// tap-Give-Up doesn't escape free.
+    /// Grace period after starting a session during which give-up
+    /// costs ZERO pixels. Covers accidental starts.
+    static let giveUpGracePeriod: TimeInterval = 120
+
+    /// Is the current session still within the no-cost grace window?
+    var isInGiveUpGrace: Bool {
+        currentSessionID != nil && sessionElapsed < Self.giveUpGracePeriod
+    }
+
+    /// Seconds remaining in the grace window. 0 once grace has expired.
+    var giveUpGraceRemaining: TimeInterval {
+        max(0, Self.giveUpGracePeriod - sessionElapsed)
+    }
+
+    /// Number of pixels a give-up costs RIGHT NOW. During the grace
+    /// window: 0. After: just the pending escrow (no floor crumble —
+    /// you only lose what you would have earned, never what you
+    /// already had).
     var giveUpPenalty: Int {
-        max(5, pendingPixelCount)
+        if isInGiveUpGrace { return 0 }
+        return pendingPixelCount
     }
 
     /// User pressed "Give up" on a committed session before the
     /// timer ran out. Forfeits the pending pixel escrow (no pour-in,
     /// no animation — they're just GONE) and marks the session
-    /// abandoned. If the escrow was smaller than the floor, the
-    /// difference comes off the rock as a real crumble.
+    /// abandoned. Inside the 2-minute grace period: pending stays
+    /// 0 anyway, so this is effectively free. No floor crumble —
+    /// Boulder never loses pixels it already had.
     func giveUpEarly() {
         guard let sid = currentSessionID else { stopFocus(); return }
         if let idx = model.sessions.firstIndex(where: { $0.id == sid }) {
             model.sessions[idx].gaveUp = true
         }
-        let forfeited = pendingPixelCount
         pendingPixelCount = 0     // forfeit escrow — never minted
-        let shortfall = max(0, 5 - forfeited)
-        if shortfall > 0 {
-            crumble(pixels: shortfall)  // make up the floor from the rock
-        }
         // Skip flushPendingPixels (count is now 0). Just close session.
         isFocusing = false
         if let idx = model.sessions.firstIndex(where: { $0.id == sid }) {
