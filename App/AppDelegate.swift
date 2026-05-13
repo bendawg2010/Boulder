@@ -27,10 +27,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installStatusItem()
         installPopover()
 
-        // 1 Hz tick — drives the focus session.
+        // 1 Hz tick — drives the focus session AND refreshes the
+        // menubar countdown title.
         tickCancellable = Timer.publish(every: 1.0, on: .main, in: .common)
             .autoconnect()
-            .sink { [weak self] _ in self?.store.tick() }
+            .sink { [weak self] _ in
+                self?.store.tick()
+                self?.updateMenubarTitle()
+            }
 
         // Refresh the menubar icon whenever the model changes. Throttled
         // to once a second so heavy pixel growth doesn't repaint the
@@ -77,11 +81,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.store.palette(for: $0) ?? BoulderRenderer.fallbackPalette
             })
             button.image?.isTemplate = true    // template — macOS tints for light/dark
-            button.imagePosition = .imageOnly
+            button.imagePosition = .imageLeading
+            button.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
             button.action = #selector(togglePopover(_:))
             button.target = self
         }
         statusItem = item
+    }
+
+    /// Refresh the menubar button's title to show a countdown timer
+    /// next to the rock during committed focus sessions. Open-ended
+    /// sessions show elapsed time. Not focusing: title is empty.
+    @MainActor
+    func updateMenubarTitle() {
+        guard let button = statusItem?.button else { return }
+        if store.isFocusing {
+            let secs: Int
+            if let remaining = store.timeRemaining {
+                secs = Int(remaining)   // countdown
+            } else {
+                secs = Int(store.sessionElapsed)  // open-ended → count up
+            }
+            let h = secs / 3600, m = (secs % 3600) / 60, s = secs % 60
+            button.title = h > 0
+                ? String(format: " %d:%02d:%02d", h, m, s)
+                : String(format: " %02d:%02d", m, s)
+            // The status item auto-expands its width to fit the title
+            // when length is .variableLength. We installed it at fixed
+            // 32; bump to variable so the timer text doesn't clip.
+            statusItem?.length = NSStatusItem.variableLength
+        } else {
+            button.title = ""
+            statusItem?.length = 32
+        }
     }
 
     @MainActor

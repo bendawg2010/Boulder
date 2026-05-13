@@ -8,6 +8,48 @@
     <description>Most recent Boulder releases.</description>
     <language>en</language>
     <item>
+      <title>v1.4.6</title>
+      <pubDate>Wed, 13 May 2026 04:50:00 +0000</pubDate>
+      <sparkle:version>1.4.6</sparkle:version>
+      <sparkle:shortVersionString>1.4.6</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <ul>
+          <li><strong>Menubar countdown.</strong> During a committed focus session, the menubar 🪨 now shows the live countdown next to it ("25:00 → 24:59 …"). Open-ended sessions show elapsed time. Hidden when not focusing.</li>
+          <li><strong>Stats tab + Calendar heatmap.</strong> Settings → Stats. Three big tiles (Total Focus / This Week / Streak), a GitHub-style year heatmap tinted by each day's dominant tag, and per-tag hour bars.</li>
+          <li><strong>Positive streak.</strong> Days in a row with ≥1 minute focused. No streak guilt.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.4.6/Boulder.dmg"
+        sparkle:version="1.4.6"
+        sparkle:shortVersionString="1.4.6"
+        length="2132655"
+        type="application/octet-stream"
+        sparkle:edSignature="dmnmX4zictFvzHlq2eFpdmvEa+R0uAmGEmYW338DQHysPiktzPkjkUIaAyYU003kHLYvu3U+Nc0oTuBYF9nODA==" />
+    </item>
+    <item>
+      <title>v1.4.5</title>
+      <pubDate>Wed, 13 May 2026 04:30:00 +0000</pubDate>
+      <sparkle:version>1.4.5</sparkle:version>
+      <sparkle:shortVersionString>1.4.5</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <ul>
+          <li><strong>Stats tab.</strong> Settings → Stats. Three big tiles (Total Focus / This Week / Streak), a GitHub-style calendar heatmap of your year, and per-tag bars showing where your hours went.</li>
+          <li><strong>Calendar heatmap.</strong> 53 weeks × 7 days. Each cell tinted by the day's dominant tag color, intensity scaled by minutes focused. Hover any day → date · minutes · pixels · top tag.</li>
+          <li><strong>Positive streak.</strong> Days in a row with ≥1 minute focused. No streak guilt — just a milestone counter.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.4.5/Boulder.dmg"
+        sparkle:version="1.4.5"
+        sparkle:shortVersionString="1.4.5"
+        length="2131273"
+        type="application/octet-stream"
+        sparkle:edSignature="/BSXFHAUP41CDhf6LcbowaLjpqeUlqUAypTm1dhsVL5u5r9l8EKUFsR/sqo8hRBRnT18191hU5Ekatx/7gFzAQ==" />
+    </item>
+    <item>
       <title>v1.4.4</title>
       <pubDate>Wed, 13 May 2026 03:30:00 +0000</pubDate>
       <sparkle:version>1.4.4</sparkle:version>

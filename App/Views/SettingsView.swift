@@ -15,7 +15,7 @@ struct SettingsView: View {
     @State private var editingTag: FocusTag? = nil
     @State private var presentTagEditor: Bool = false
 
-    enum Tab: Hashable { case general, tags, blocked, about }
+    enum Tab: Hashable { case general, tags, blocked, stats, about }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,6 +23,7 @@ struct SettingsView: View {
                 Text("General").tag(Tab.general)
                 Text("Tags").tag(Tab.tags)
                 Text("Blocked Apps").tag(Tab.blocked)
+                Text("Stats").tag(Tab.stats)
                 Text("About").tag(Tab.about)
             }
             .pickerStyle(.segmented)
@@ -35,6 +36,7 @@ struct SettingsView: View {
                 case .general: generalTab
                 case .tags:    tagsTab
                 case .blocked: blockedTab
+                case .stats:   StatsView().environmentObject(store)
                 case .about:   aboutTab
                 }
             }
