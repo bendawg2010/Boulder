@@ -228,8 +228,17 @@ struct PopoverContentView: View {
                 )
                 .frame(maxWidth: .infinity)
                 .frame(height: 180)
-                .scaleEffect(store.flushState == nil ? 1.0 : 1.12)
-                .animation(.easeInOut(duration: 0.45), value: store.flushState)
+                // Aggressive zoom-in during the pour-in so each new
+                // pixel feels weighty. 1.0 → 1.30 over 0.55s easeOut,
+                // hold at 1.30 while pixels stagger in, ease back to
+                // 1.0 at the tail.
+                .scaleEffect(store.flushState == nil ? 1.0 : 1.30)
+                .animation(
+                    store.flushState == nil
+                        ? .easeIn(duration: 0.5)
+                        : .easeOut(duration: 0.55),
+                    value: store.flushState
+                )
                 .offset(x: shake)
             }
             if crumblePop {
@@ -616,6 +625,12 @@ struct PopoverContentView: View {
     private var timerText: String {
         if store.isFocusing, let remaining = store.timeRemaining {
             return formatHMS(Int(remaining))
+        }
+        // Pre-focus: show the picked duration as a countdown PREVIEW
+        // so the user can see "15:00" before hitting Focus, then it
+        // counts down from there. Was showing 00:00 → looked broken.
+        if !store.isFocusing, let d = store.draftDuration, d > 0 {
+            return formatHMS(Int(d))
         }
         return formatHMS(Int(store.sessionElapsed))
     }

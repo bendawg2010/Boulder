@@ -8,6 +8,26 @@
     <description>Most recent Boulder releases.</description>
     <language>en</language>
     <item>
+      <title>v1.4.4</title>
+      <pubDate>Wed, 13 May 2026 03:30:00 +0000</pubDate>
+      <sparkle:version>1.4.4</sparkle:version>
+      <sparkle:shortVersionString>1.4.4</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <ul>
+          <li><strong>Countdown preview.</strong> Picking a duration (15m / 25m / etc.) now previews the countdown immediately — you see 15:00 before pressing Focus, then it counts down from there. Previously showed 00:00 → looked broken.</li>
+          <li><strong>Pour-in animation is way tougher.</strong> Zoom-in cranked from 1.12× → 1.30×. Stagger slowed (0.06–0.18s per pixel) so each pixel is individually visible. Each pixel pops in with overshoot scale (0.05 → 1.45 → 1.0) and a yellow halo flash that fades over 0.5s. Each landing reads like a small impact.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.4.4/Boulder.dmg"
+        sparkle:version="1.4.4"
+        sparkle:shortVersionString="1.4.4"
+        length="2064016"
+        type="application/octet-stream"
+        sparkle:edSignature="Z0D72ks5jRMhNe7rd7nQ4U5Gu6lL2xO22K/SPwprMDurZGJsB+p0VvUQpc0EKr8gGqmnPAUi8WdzaqZlUsQMDQ==" />
+    </item>
+    <item>
       <title>v1.4.3</title>
       <pubDate>Wed, 13 May 2026 03:00:00 +0000</pubDate>
       <sparkle:version>1.4.3</sparkle:version>

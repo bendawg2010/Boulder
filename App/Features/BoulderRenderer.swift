@@ -92,21 +92,34 @@ struct BoulderRenderer: View {
                     }
 
                     for (i, p) in pixels.enumerated() {
-                        // Pour-in: pixels at flushState.firstNewIndex+
-                        // stagger in over ~0.35s each, with optional
-                        // scale-up + fade. If we haven't reached this
-                        // pixel's start time yet, skip it.
+                        // Pour-in animation: each new pixel pops in with
+                        // (a) a yellow halo glow that fades over 0.5s,
+                        // (b) an overshoot scale 0.0 → 1.4 → 1.0,
+                        // (c) an opacity ramp 0 → 1.
+                        // Pixels staggered by f.stagger seconds so each
+                        // one is individually visible.
                         var opacity: Double = 1.0
                         var scale: CGFloat = 1.0
+                        var glowAlpha: Double = 0.0
                         if let f = flushState, i >= f.firstNewIndex {
                             let offset = Double(i - f.firstNewIndex) * f.stagger
                             let elapsed = now.timeIntervalSince(f.startedAt) - offset
                             if elapsed < 0 { continue }   // not yet visible
-                            let fadeIn: Double = 0.35
+                            let fadeIn: Double = 0.55
+                            let halo:   Double = 0.50
                             if elapsed < fadeIn {
                                 let t = elapsed / fadeIn
                                 opacity = t
-                                scale = 0.55 + 0.45 * t
+                                // Overshoot: 0.0 → 1.45 by mid, settle to 1.0.
+                                let s = t
+                                if s < 0.55 {
+                                    scale = 0.05 + (1.45 - 0.05) * (s / 0.55)
+                                } else {
+                                    scale = 1.45 - (1.45 - 1.0) * ((s - 0.55) / 0.45)
+                                }
+                            }
+                            if elapsed < halo {
+                                glowAlpha = 0.85 * (1.0 - elapsed / halo)
                             }
                         }
 
@@ -118,6 +131,25 @@ struct BoulderRenderer: View {
                             scaledRect = rect.insetBy(dx: dx, dy: dy)
                         } else {
                             scaledRect = rect
+                        }
+
+                        // Halo glow — bright yellow soft square ~2.5× the
+                        // cell, layered BEHIND the pixel. Reads as a brief
+                        // "spark" as each pixel lands. Done before the
+                        // pixel fill so the pixel sits on top.
+                        if glowAlpha > 0.01 {
+                            let glowSize = rect.width * 3.2
+                            let glowRect = CGRect(
+                                x: rect.midX - glowSize / 2,
+                                y: rect.midY - glowSize / 2,
+                                width: glowSize, height: glowSize
+                            )
+                            var glowCtx = ctx
+                            glowCtx.opacity = glowAlpha
+                            glowCtx.fill(
+                                Path(ellipseIn: glowRect),
+                                with: .color(Color(hex: 0xFFD960).opacity(0.55))
+                            )
                         }
 
                         let palette = paletteFor(p)

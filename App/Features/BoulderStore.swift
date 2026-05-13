@@ -232,10 +232,12 @@ final class BoulderStore: ObservableObject {
         guard count > 0 else { return }
         let firstNewIndex = model.pixels.count
         for _ in 0..<count { emitPixel() }
-        // Stagger between pixels: visible up to ~2.5s total. Faster
-        // when there are many pixels so a long session doesn't sit
-        // through a glacial reveal.
-        let stagger = min(0.08, max(0.015, 2.0 / Double(count)))
+        // Slower stagger so each pixel is individually visible.
+        // Floor 0.06s so even big flushes feel punchy. Ceiling 0.18s
+        // so a small (~5 px) flush is luxurious. Cap total at ~5s
+        // for very large flushes (a 90m commitment can earn ~40-60).
+        let perPixel = 4.5 / Double(count)
+        let stagger = min(0.18, max(0.06, perPixel))
         let f = FlushState(
             firstNewIndex: firstNewIndex,
             count: count,
@@ -243,9 +245,7 @@ final class BoulderStore: ObservableObject {
             stagger: stagger
         )
         flushState = f
-        // Clear flushState after the animation finishes so the
-        // renderer goes back to its steady-state path.
-        let cleanup = f.totalDuration + 0.4
+        let cleanup = f.totalDuration + 0.5
         DispatchQueue.main.asyncAfter(deadline: .now() + cleanup) { [weak self] in
             guard let self else { return }
             if self.flushState == f { self.flushState = nil }
