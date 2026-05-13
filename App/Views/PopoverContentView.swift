@@ -26,6 +26,8 @@ struct PopoverContentView: View {
     @State private var editingTag: FocusTag? = nil
     @State private var inspector: PixelInspection? = nil
     @State private var showGiveUpConfirm: Bool = false
+    @State private var focusFieldHovered: Bool = false
+    @FocusState private var descriptionFocused: Bool
 
     var body: some View {
         ZStack {
@@ -79,61 +81,177 @@ struct PopoverContentView: View {
     // MARK: Boulder stage
 
     private var boulderStage: some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 8) {
-                Text(store.model.tier.rawValue)
-                    .font(.headline)
-                    .foregroundStyle(.white.opacity(0.92))
-                if store.isFocusing {
-                    Circle()
-                        .fill(Color(hex: 0x2EE6A0))
-                        .frame(width: 6, height: 6)
-                    Text(store.momentumTierLabel)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color(hex: 0x2EE6A0))
-                    Text(String(format: "×%.1f", store.currentMultiplier))
-                        .font(.caption.monospacedDigit().weight(.bold))
-                        .foregroundStyle(Color(hex: 0xFFD960))
-                }
-                Spacer()
-                Text("\(store.model.pixelCount) px")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.white.opacity(0.55))
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
+        VStack(spacing: 8) {
+            header
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
 
-            ZStack {
-                if store.model.pixels.isEmpty {
-                    emptyRockState
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 180)
-                } else {
-                    BoulderRenderer(
-                        pixels: store.model.pixels,
-                        paletteFor: { store.palette(for: $0) },
-                        onPixelTap: handlePixelTap
+            canvas
+
+            tierProgressBar
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+                .padding(.bottom, 12)
+        }
+    }
+
+    /// Tier name + momentum pill + pixel count. Designed as a three-band
+    /// header — title left, momentum chip center (only when focusing),
+    /// pixel count right. The momentum pill consolidates the previous
+    /// dot + label + multiplier into a single tinted capsule.
+    private var header: some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(store.model.tier.rawValue)
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.94))
+                    .tracking(0.2)
+                Text(tierSubtitle)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+            Spacer(minLength: 6)
+            if store.isFocusing {
+                momentumPill
+                    .transition(.scale(scale: 0.85).combined(with: .opacity))
+            }
+            Text("\(store.model.pixelCount) px")
+                .font(.caption.monospacedDigit().weight(.medium))
+                .foregroundStyle(.white.opacity(0.55))
+        }
+        .animation(.easeOut(duration: 0.2), value: store.isFocusing)
+    }
+
+    private var tierSubtitle: String {
+        let next = nextTierName
+        let remaining = max(0, pixelsToNextTier)
+        if remaining == 0 { return "Mountain reached — release when ready" }
+        return "\(remaining) px to \(next)"
+    }
+
+    private var nextTierName: String {
+        let tiers = SizeTier.allCases
+        guard let idx = tiers.firstIndex(of: store.model.tier),
+              idx + 1 < tiers.count else { return "Mountain" }
+        return tiers[idx + 1].rawValue
+    }
+
+    private var pixelsToNextTier: Int {
+        let tiers = SizeTier.allCases
+        guard let idx = tiers.firstIndex(of: store.model.tier),
+              idx + 1 < tiers.count else { return 0 }
+        return tiers[idx + 1].thresholdPixels - store.model.pixelCount
+    }
+
+    private var momentumPill: some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(Color(hex: 0x2EE6A0))
+                .frame(width: 5, height: 5)
+                .shadow(color: Color(hex: 0x2EE6A0).opacity(0.6), radius: 3)
+            Text(store.momentumTierLabel)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
+            Text(String(format: "×%.1f", store.currentMultiplier))
+                .font(.caption2.monospacedDigit().weight(.heavy))
+                .foregroundStyle(Color(hex: 0xFFD960))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            Capsule()
+                .fill(Color(hex: 0x2EE6A0).opacity(0.10))
+                .overlay(
+                    Capsule().stroke(Color(hex: 0x2EE6A0).opacity(0.25), lineWidth: 0.8)
+                )
+        )
+    }
+
+    /// Boulder canvas. Wrapped in a subtle radial vignette so the rock
+    /// reads as sitting IN the popover, not floating on it.
+    private var canvas: some View {
+        ZStack {
+            // Vignette — gradient + inner stroke gives the rock a stage.
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color.white.opacity(0.04),
+                            Color.black.opacity(0.0),
+                            Color.black.opacity(0.18)
+                        ],
+                        center: .center,
+                        startRadius: 30,
+                        endRadius: 180
                     )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                )
+                .padding(.horizontal, 12)
+
+            if store.model.pixels.isEmpty {
+                emptyRockState
                     .frame(maxWidth: .infinity)
                     .frame(height: 180)
-                    .offset(x: shake)
-                }
-                if crumblePop {
-                    Text("−3 px")
-                        .font(.headline.bold())
-                        .foregroundStyle(Color(hex: 0xFF6B6B))
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                        .padding(.bottom, 70)
-                }
-                if let inspector { inspectorOverlay(inspector) }
+            } else {
+                BoulderRenderer(
+                    pixels: store.model.pixels,
+                    paletteFor: { store.palette(for: $0) },
+                    onPixelTap: handlePixelTap
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: 180)
+                .offset(x: shake)
             }
-
-            ProgressView(value: store.model.tierProgress)
-                .progressViewStyle(.linear)
-                .tint(Color(hex: 0xC147FF))
-                .padding(.horizontal, 16)
-                .padding(.bottom, 8)
+            if crumblePop {
+                Text("−3 px")
+                    .font(.headline.bold())
+                    .foregroundStyle(Color(hex: 0xFF6B6B))
+                    .shadow(color: Color(hex: 0xFF6B6B).opacity(0.6), radius: 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .padding(.bottom, 70)
+            }
+            if let inspector { inspectorOverlay(inspector) }
         }
+    }
+
+    /// Refined tier progress bar with subdivision ticks for upcoming
+    /// tiers and a smoothly-animated fill.
+    private var tierProgressBar: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                // Track
+                Capsule()
+                    .fill(Color.white.opacity(0.06))
+                // Fill
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: 0xC147FF), Color(hex: 0xFF6B6B)],
+                            startPoint: .leading, endPoint: .trailing
+                        )
+                    )
+                    .frame(width: max(2, geo.size.width * CGFloat(store.model.tierProgress)))
+                    .animation(.easeOut(duration: 0.6), value: store.model.tierProgress)
+                // Subdivision ticks for the upcoming tier(s).
+                ForEach(upcomingTierTicks, id: \.self) { t in
+                    Rectangle()
+                        .fill(Color.white.opacity(0.18))
+                        .frame(width: 1, height: 6)
+                        .offset(x: geo.size.width * CGFloat(t) - 0.5)
+                }
+            }
+        }
+        .frame(height: 6)
+    }
+
+    /// Tick positions within the current tier-progress range. Currently
+    /// just a midpoint marker — keeps the bar from feeling featureless
+    /// without overcrowding it.
+    private var upcomingTierTicks: [Double] {
+        store.model.tier == .mountain ? [] : [0.5]
     }
 
     private var emptyRockState: some View {
@@ -157,12 +275,13 @@ struct PopoverContentView: View {
     // MARK: Description field
 
     private var descriptionField: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(store.isFocusing
                  ? "Currently focusing on"
                  : "What are you focusing on?")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.45))
+                .tracking(0.3)
             TextField(
                 "e.g. \"Refactoring the boulder renderer\"",
                 text: store.isFocusing
@@ -172,12 +291,26 @@ struct PopoverContentView: View {
             .textFieldStyle(.plain)
             .font(.body)
             .foregroundStyle(.white)
-            .padding(8)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.06)))
+            .focused($descriptionFocused)
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.white.opacity(descriptionFocused ? 0.10 : 0.06))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(
+                        descriptionFocused
+                            ? (store.selectedTag?.chipColor ?? Color(hex: 0xC147FF)).opacity(0.65)
+                            : Color.white.opacity(0.05),
+                        lineWidth: 1.2
+                    )
+            )
+            .animation(.easeOut(duration: 0.18), value: descriptionFocused)
             .disabled(store.isFocusing)
         }
         .padding(.horizontal, 16)
-        .padding(.top, 12)
+        .padding(.top, 14)
     }
 
     private var currentSessionBlurb: String {
@@ -189,18 +322,19 @@ struct PopoverContentView: View {
     @ViewBuilder
     private var tagPickerOrEmpty: some View {
         if store.model.tags.isEmpty {
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 Button {
                     editingTag = nil
                     presentTagEditor = true
                 } label: {
                     Label("Create your first tag", systemImage: "plus.circle.fill")
                         .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 11)
                         .background(
-                            RoundedRectangle(cornerRadius: 12)
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .fill(Color(hex: 0xC147FF))
+                                .shadow(color: Color(hex: 0xC147FF).opacity(0.45), radius: 10, y: 3)
                         )
                         .foregroundStyle(.white)
                 }
@@ -209,9 +343,9 @@ struct PopoverContentView: View {
                     .multilineTextAlignment(.center)
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.45))
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, 28)
             }
-            .padding(.vertical, 14)
+            .padding(.vertical, 16)
             .frame(maxWidth: .infinity)
         } else {
             tagPicker
@@ -226,23 +360,23 @@ struct PopoverContentView: View {
                     editingTag = nil
                     presentTagEditor = true
                 } label: {
-                    VStack(spacing: 2) {
+                    VStack(spacing: 3) {
                         Image(systemName: "plus")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 13, weight: .bold))
                         Text("New").font(.caption2.weight(.semibold))
                     }
-                    .frame(width: 56, height: 50)
+                    .frame(width: 56, height: 54)
                     .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        RoundedRectangle(cornerRadius: 11, style: .continuous)
                             .stroke(Color.white.opacity(0.15),
                                     style: StrokeStyle(lineWidth: 1, dash: [3]))
                     )
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.white.opacity(0.55))
                 }
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.vertical, 10)
         }
     }
 
@@ -251,31 +385,55 @@ struct PopoverContentView: View {
         return Button {
             store.selectedTagID = tag.id
         } label: {
-            VStack(spacing: 2) {
-                Text(tag.emoji).font(.system(size: 16))
+            VStack(spacing: 4) {
+                Text(tag.emoji).font(.system(size: 17))
                 Text(tag.name)
                     .font(.caption2.weight(.semibold))
                     .lineLimit(1)
-                Rectangle()
-                    .fill(tag.chipColor)
-                    .frame(height: 3)
-                    .cornerRadius(1.5)
             }
-            .frame(width: 64)
-            .padding(.vertical, 7).padding(.horizontal, 4)
+            .frame(width: 64, height: 54)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isSelected ? Color.white.opacity(0.18) : Color.white.opacity(0.05))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(isSelected ? tag.chipColor.opacity(0.7) : .clear, lineWidth: 1.5)
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(
+                        isSelected
+                            ? tag.chipColor.opacity(0.28)
+                            : Color.white.opacity(0.05)
                     )
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .stroke(
+                        isSelected ? tag.chipColor.opacity(0.85) : Color.white.opacity(0.06),
+                        lineWidth: isSelected ? 1.4 : 1
+                    )
+            )
+            .overlay(alignment: .bottom) {
+                // A thin tinted bar at the bottom edge — replaces the
+                // 3px detached stripe with something that reads as
+                // chip styling rather than a separate element.
+                RoundedRectangle(cornerRadius: 0, style: .continuous)
+                    .fill(tag.chipColor.opacity(isSelected ? 0.9 : 0.4))
+                    .frame(height: 2)
+                    .clipShape(
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: 0,
+                            bottomLeadingRadius: 11,
+                            bottomTrailingRadius: 11,
+                            topTrailingRadius: 0
+                        )
+                    )
+            }
             .foregroundStyle(.white.opacity(0.92))
+            .shadow(
+                color: isSelected ? tag.chipColor.opacity(0.4) : .clear,
+                radius: isSelected ? 6 : 0,
+                y: isSelected ? 1 : 0
+            )
         }
         .buttonStyle(.plain)
         .disabled(store.isFocusing)
         .opacity(store.isFocusing && !isSelected ? 0.4 : 1.0)
+        .animation(.easeOut(duration: 0.15), value: isSelected)
         .contextMenu {
             Button("Edit") {
                 editingTag = tag
@@ -302,16 +460,25 @@ struct PopoverContentView: View {
     ]
 
     private var durationPicker: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Text(durationPickerHeading)
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.45))
+                    .tracking(0.3)
                 Spacer()
                 if !store.isFocusing, let d = store.draftDuration, d > 0 {
-                    Image(systemName: "lock.fill")
-                        .font(.caption2)
-                        .foregroundStyle(Color(hex: 0xFFD960))
+                    HStack(spacing: 4) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 9))
+                        Text("Committed")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .foregroundStyle(Color(hex: 0xFFD960))
+                    .padding(.horizontal, 7).padding(.vertical, 2)
+                    .background(
+                        Capsule().fill(Color(hex: 0xFFD960).opacity(0.12))
+                    )
                 }
             }
             HStack(spacing: 6) {
@@ -321,17 +488,17 @@ struct PopoverContentView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 4)
+        .padding(.top, 8)
     }
 
     private var durationPickerHeading: String {
         if store.isFocusing {
             if let d = store.session(forID: store.currentSessionID)?.plannedDuration, d > 0 {
-                return "Committed to"
+                return "COMMITTED TO"
             }
-            return "Open session"
+            return "OPEN SESSION"
         }
-        return "Pick a duration (optional)"
+        return "PICK A DURATION (OPTIONAL)"
     }
 
     private func durationChip(label: String, seconds: TimeInterval) -> some View {
@@ -342,6 +509,10 @@ struct PopoverContentView: View {
         } else {
             isSelected = (store.draftDuration == seconds)
         }
+        // The "Open" chip is the only non-committed option — give it
+        // a visually quieter neutral treatment vs the gold "lock" set.
+        let isOpen = (seconds == 0)
+        let activeTint = isOpen ? Color.white : Color(hex: 0xFFD960)
         return Button {
             // Toggle off if tapping the already-selected chip — lets
             // the user back out without picking a different option.
@@ -351,24 +522,33 @@ struct PopoverContentView: View {
                 store.draftDuration = seconds
             }
         } label: {
-            Text(label)
-                .font(.caption.weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: 30)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(isSelected
-                              ? Color(hex: 0xFFD960).opacity(0.20)
-                              : Color.white.opacity(0.05))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(isSelected ? Color(hex: 0xFFD960).opacity(0.6) : .clear,
-                                        lineWidth: 1.5)
-                        )
-                )
-                .foregroundStyle(isSelected ? Color(hex: 0xFFD960) : .white.opacity(0.7))
+            ZStack {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(
+                        isSelected
+                            ? activeTint.opacity(isOpen ? 0.13 : 0.20)
+                            : Color.white.opacity(0.05)
+                    )
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .stroke(
+                        isSelected ? activeTint.opacity(0.65) : Color.white.opacity(0.04),
+                        lineWidth: isSelected ? 1.3 : 1
+                    )
+                HStack(spacing: 4) {
+                    if isSelected && !isOpen {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 8, weight: .bold))
+                    }
+                    Text(label)
+                        .font(.caption.weight(.semibold))
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 32)
+            .foregroundStyle(isSelected ? activeTint : .white.opacity(0.7))
         }
         .buttonStyle(.plain)
         .disabled(store.isFocusing)
+        .animation(.easeOut(duration: 0.12), value: isSelected)
     }
 
     // MARK: Timer row
@@ -377,20 +557,33 @@ struct PopoverContentView: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(timerText)
-                    .font(.system(size: 26, weight: .bold, design: .monospaced))
+                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .tracking(-0.5)
                     .foregroundStyle(timerColor)
                     .contentTransition(.numericText())
                 if store.isFocusing, let remaining = store.timeRemaining {
                     Text("\(formatDuration(remaining)) left")
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.white.opacity(0.4))
+                } else if !store.isFocusing {
+                    Text(timerHint)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.35))
                 }
             }
             Spacer()
             focusButton
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
+    }
+
+    private var timerHint: String {
+        if store.selectedTag == nil { return "Pick a tag to focus" }
+        if let d = store.draftDuration, d > 0 {
+            return "Tap Focus to commit"
+        }
+        return "Ready when you are"
     }
 
     private var timerText: String {
@@ -419,11 +612,21 @@ struct PopoverContentView: View {
             }
         } label: {
             Text(focusButtonTitle)
-                .font(.headline)
-                .frame(width: 112, height: 36)
+                .font(.system(size: 14, weight: .semibold))
+                .tracking(0.3)
+                .frame(width: 112, height: 38)
                 .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: 19, style: .continuous)
                         .fill(focusButtonFill)
+                        .shadow(
+                            color: focusButtonFill.opacity(0.55),
+                            radius: 10,
+                            y: 3
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 19, style: .continuous)
+                        .stroke(Color.white.opacity(0.18), lineWidth: 0.8)
                 )
                 .foregroundStyle(.white)
         }
@@ -457,36 +660,61 @@ struct PopoverContentView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 11))
                         Text("Block apps that break your focus")
                             .font(.caption)
                     }
                     .foregroundStyle(.white.opacity(0.42))
-                    .padding(.horizontal, 16).padding(.vertical, 6)
+                    .padding(.horizontal, 16).padding(.vertical, 8)
                 }
                 .buttonStyle(.plain)
             } else {
-                HStack(spacing: 6) {
-                    Text("Blocking:")
-                        .font(.caption2)
+                HStack(spacing: 8) {
+                    Text("Blocking")
+                        .font(.caption2.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.45))
-                    ForEach(store.model.blockedApps.prefix(6)) { app in
-                        Image(nsImage: app.icon)
-                            .resizable()
-                            .frame(width: 16, height: 16)
-                            .opacity(0.85)
-                    }
-                    if store.model.blockedApps.count > 6 {
-                        Text("+\(store.model.blockedApps.count - 6)")
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.45))
-                    }
+                        .tracking(0.3)
+                    blockedIconCluster
                     Spacer()
                     Button("Edit") { appDelegate.openSettings() }
                         .buttonStyle(.plain)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.55))
                 }
-                .padding(.horizontal, 16).padding(.vertical, 6)
+                .padding(.horizontal, 16).padding(.vertical, 8)
+            }
+        }
+    }
+
+    /// Overlapped row of blocked-app icons (Slack-avatar style).
+    /// Caps at 6 visible, then "+N" pill for the rest.
+    private var blockedIconCluster: some View {
+        let apps = Array(store.model.blockedApps.prefix(6))
+        let overflow = store.model.blockedApps.count - apps.count
+        return HStack(spacing: -6) {
+            ForEach(Array(apps.enumerated()), id: \.element.id) { (idx, app) in
+                Image(nsImage: app.icon)
+                    .resizable()
+                    .frame(width: 18, height: 18)
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .stroke(Color(hex: 0x0A0518), lineWidth: 1.5)
+                    )
+                    .zIndex(Double(apps.count - idx))
+                    .help(app.displayName)
+            }
+            if overflow > 0 {
+                Text("+\(overflow)")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .frame(width: 18, height: 18)
+                    .background(
+                        Circle()
+                            .fill(Color.white.opacity(0.12))
+                            .overlay(Circle().stroke(Color(hex: 0x0A0518), lineWidth: 1.5))
+                    )
+                    .padding(.leading, 2)
             }
         }
     }
@@ -495,27 +723,82 @@ struct PopoverContentView: View {
 
     private var footer: some View {
         HStack(spacing: 8) {
-            footerButton("Gallery") { appDelegate.openGallery() }
+            footerButton(label: "Gallery", icon: "mountain.2.fill") {
+                appDelegate.openGallery()
+            }
             if store.model.canRelease {
-                footerButton("Release →") { store.isReleasing = true }
+                releaseFooterButton
             }
             Spacer()
-            footerButton("Settings") { appDelegate.openSettings() }
-            footerButton("Quit") { appDelegate.quit(nil) }
+            footerButton(label: "Settings", icon: "gearshape.fill") {
+                appDelegate.openSettings()
+            }
+            footerButton(label: "Quit", icon: nil, isQuit: true) {
+                appDelegate.quit(nil)
+            }
         }
         .padding(.horizontal, 12)
-        .padding(.bottom, 10)
+        .padding(.bottom, 12)
+        .padding(.top, 4)
     }
 
-    private func footerButton(_ title: String, action: @escaping () -> Void) -> some View {
+    private func footerButton(label: String, icon: String?, isQuit: Bool = false,
+                               action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title)
-                .font(.caption.weight(.medium))
-                .padding(.horizontal, 10).padding(.vertical, 6)
-                .background(Capsule().fill(Color.white.opacity(0.07)))
-                .foregroundStyle(.white.opacity(0.85))
+            HStack(spacing: 5) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                Text(label)
+                    .font(.caption.weight(.medium))
+            }
+            .padding(.horizontal, 11)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(Color.white.opacity(isQuit ? 0.05 : 0.08))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(Color.white.opacity(0.04), lineWidth: 1)
+            )
+            .foregroundStyle(.white.opacity(isQuit ? 0.55 : 0.85))
         }
         .buttonStyle(.plain)
+    }
+
+    /// Bright pill calling attention to the once-in-a-while Release
+    /// action. Subtle pulse keeps it readable as "do this if you want".
+    private var releaseFooterButton: some View {
+        Button { store.isReleasing = true } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "wind")
+                    .font(.system(size: 10, weight: .bold))
+                Text("Release")
+                    .font(.caption.weight(.semibold))
+            }
+            .padding(.horizontal, 11)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(hex: 0x2EE6A0).opacity(0.20),
+                                Color(hex: 0x47A0FF).opacity(0.20)
+                            ],
+                            startPoint: .leading, endPoint: .trailing
+                        )
+                    )
+            )
+            .overlay(
+                Capsule().stroke(Color(hex: 0x2EE6A0).opacity(0.35), lineWidth: 1)
+            )
+            .foregroundStyle(Color(hex: 0x2EE6A0))
+        }
+        .buttonStyle(.plain)
+        .help("Retire this Boulder into your Mountain Range and start fresh")
     }
 
     // MARK: Pixel inspector

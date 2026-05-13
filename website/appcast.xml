@@ -8,6 +8,27 @@
     <description>Most recent Boulder releases.</description>
     <language>en</language>
     <item>
+      <title>v1.4.2</title>
+      <pubDate>Tue, 12 May 2026 02:15:00 +0000</pubDate>
+      <sparkle:version>1.4.2</sparkle:version>
+      <sparkle:shortVersionString>1.4.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <ul>
+          <li><strong>Photo-real rock.</strong> Boulder's surface now has multi-octave value noise, procedural cracks following a 2D wave field, vertical weathering streaks, moss/lichen flecks in the shaded quadrant, ambient occlusion at the edges, and a cast shadow on the ground.</li>
+          <li><strong>Stage vignette.</strong> The rock now sits in a subtle inset radial gradient — feels like the boulder is in a space, not floating.</li>
+          <li><strong>Refined popover header.</strong> Tier name + "N px to next tier" subtitle, dedicated momentum capsule (green glow dot, label, multiplier), and the pixel count as a quieter monospace.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.4.2/Boulder.dmg"
+        sparkle:version="1.4.2"
+        sparkle:shortVersionString="1.4.2"
+        length="2051120"
+        type="application/octet-stream"
+        sparkle:edSignature="ArJ9W2Ce4phI2Q6T6Z7TnBcZuZpg7Gsj6uJ6BPO8mx/sH+pOwfnyBhU7xWCB0g8wbWmrRW7nyQocSpsbjWgSBw==" />
+    </item>
+    <item>
       <title>v1.4.1</title>
       <pubDate>Tue, 12 May 2026 01:30:00 +0000</pubDate>
       <sparkle:version>1.4.1</sparkle:version>

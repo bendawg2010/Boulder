@@ -2,8 +2,15 @@
 //
 // SwiftUI Canvas that paints a BoulderModel as chunky pixel art.
 // Pixel colors come from the store's tag library: each pixel carries
-// a `tagID` which the store resolves to a 4-color palette. Legacy
+// a `tagID` which the store resolves to a 20-shade palette. Legacy
 // pixels (pre-v1.3.0) fall back to FocusType.palette.
+//
+// Realism extras handled at draw time:
+//   - `shadowBelow`: a soft cast shadow ellipse painted on the
+//     baseline BEFORE the boulder cells. Sells the "rock is sitting
+//     on something" effect.
+//   - Moss tinting: cells whose (x,y) is in BoulderShape.mossCoords
+//     get their resolved palette color blended toward an olive-green.
 //
 // Empty-state behavior: the renderer draws nothing when pixels is
 // empty — the popover shows a clear "Press Focus" empty state in
@@ -27,6 +34,10 @@ struct BoulderRenderer: View {
     var cellSize: CGFloat = 4
     var autoScale: Bool = true
     var groundLine: Bool = true
+    /// Draw a cast shadow ellipse under the boulder. Adds "weight"
+    /// and grounds the rock visually. Default on; disable for hero
+    /// renders that don't need a baseline.
+    var shadowBelow: Bool = true
 
     /// Optional tap handler. Receives the pixel array index nearest
     /// the tap point, or nil if the tap missed every pixel.
@@ -40,6 +51,30 @@ struct BoulderRenderer: View {
                 guard !pixels.isEmpty else { return }
                 let (cell, cx, baselineY) = layout(in: size)
 
+                // Cast shadow — painted BEFORE the boulder so the rock
+                // sits on top of it. Soft ellipse, slightly wider than
+                // the boulder, just below the baseline.
+                if shadowBelow {
+                    let maxAbsX = pixels.reduce(0) { max($0, abs($1.x)) }
+                    let halfW = CGFloat(maxAbsX + 1) * cell
+                    let shadowW = halfW * 2.0 * 1.10
+                    let shadowH = max(cell * 1.4, cell * 2.2)
+                    let shadowRect = CGRect(
+                        x: cx - shadowW / 2,
+                        y: baselineY - shadowH * 0.30,
+                        width: shadowW,
+                        height: shadowH
+                    )
+                    // Inner darker oval, outer falloff for soft edge.
+                    let shadowPath = Path(ellipseIn: shadowRect)
+                    ctx.fill(shadowPath, with: .color(Color.black.opacity(0.28)))
+                    let outerRect = shadowRect.insetBy(dx: -cell * 0.6, dy: -cell * 0.25)
+                    let outerPath = Path(ellipseIn: outerRect)
+                    ctx.blendMode = .multiply
+                    ctx.fill(outerPath, with: .color(Color.black.opacity(0.10)))
+                    ctx.blendMode = .normal
+                }
+
                 if groundLine {
                     var dust = Path()
                     dust.move(to: CGPoint(x: 8, y: baselineY + cell * 0.5))
@@ -50,7 +85,12 @@ struct BoulderRenderer: View {
                 for p in pixels {
                     let rect = rectFor(p, cell: cell, cx: cx, baselineY: baselineY)
                     let palette = paletteFor(p)
-                    let color = palette[max(0, min(palette.count - 1, p.shade))]
+                    var color = palette[max(0, min(palette.count - 1, p.shade))]
+                    // Moss tint: blend toward olive-green for cells
+                    // flagged as moss in BoulderShape.mossCoords.
+                    if BoulderShape.isMoss(p.x, p.y) {
+                        color = Self.tintMoss(color)
+                    }
                     ctx.fill(Path(rect), with: .color(color))
                 }
             }
@@ -61,6 +101,29 @@ struct BoulderRenderer: View {
                 onPixelTap(nearestPixelIndex(to: location, in: geo.size))
             }
         }
+    }
+
+    // MARK: Tinting
+
+    /// Blend a base palette color toward an olive-green for moss/
+    /// lichen cells. Keeps the underlying brightness so moss reads
+    /// as natural growth, not a paint splat.
+    private static func tintMoss(_ base: Color) -> Color {
+        // Olive-green target. Hue ~0.27, low saturation, body
+        // brightness — reads as old, weathered lichen.
+        let target = Color(hue: 0.27, saturation: 0.45, brightness: 0.48)
+        // Mix base and target in sRGB via NSColor (works on macOS).
+        #if canImport(AppKit)
+        let nb = NSColor(base).usingColorSpace(.sRGB) ?? NSColor.gray
+        let nt = NSColor(target).usingColorSpace(.sRGB) ?? NSColor.gray
+        let mix: CGFloat = 0.70
+        let r = nb.redComponent * (1 - mix) + nt.redComponent * mix
+        let g = nb.greenComponent * (1 - mix) + nt.greenComponent * mix
+        let b = nb.blueComponent * (1 - mix) + nt.blueComponent * mix
+        return Color(NSColor(srgbRed: r, green: g, blue: b, alpha: 1))
+        #else
+        return target
+        #endif
     }
 
     // MARK: Geometry
@@ -117,7 +180,10 @@ struct BoulderRenderer: View {
     }
 
     static let fallbackPalette: [Color] = [
-        Color(white: 0.18), Color(white: 0.35),
-        Color(white: 0.55), Color(white: 0.80)
+        Color(white: 0.14), Color(white: 0.20), Color(white: 0.26), Color(white: 0.32),
+        Color(white: 0.36), Color(white: 0.40), Color(white: 0.44), Color(white: 0.48),
+        Color(white: 0.52), Color(white: 0.56), Color(white: 0.60), Color(white: 0.64),
+        Color(white: 0.68), Color(white: 0.72), Color(white: 0.76), Color(white: 0.80),
+        Color(white: 0.83), Color(white: 0.86), Color(white: 0.89), Color(white: 0.92)
     ]
 }
