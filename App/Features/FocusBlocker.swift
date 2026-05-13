@@ -81,31 +81,34 @@ final class FocusBlocker: NSObject, UNUserNotificationCenterDelegate {
         let blocked = store.model.blockedApps
         guard let match = blocked.first(where: { $0.bundleIdentifier == bid }) else { return }
 
-        // ACTIVE PUSH-BACK. macOS won't grant indie apps the
-        // FamilyControls entitlement that would let us truly block
-        // an app from launching, but we CAN:
-        //   1) Hide the blocked app immediately (Cmd+H equivalent)
-        //   2) Activate Boulder so the user sees the consequence
-        //   3) Open the popover so the crumble flash is visible
-        //   4) Crumble pixels
-        // The user can switch back to the blocked app, but each
-        // switch costs more pixels — friction without OS-level
-        // privileges.
+        // HARD push-back. Apple won't grant indie apps the
+        // FamilyControls entitlement for true OS-level blocking,
+        // so we do the strongest non-destructive thing macOS allows:
+        //   1) Hide the blocked app immediately on EVERY activation
+        //      — no cooldown on the hide, so cmd-tabbing to it just
+        //      makes it vanish again
+        //   2) Hide it again ~0.2s later (defense against apps that
+        //      auto-restore themselves)
+        //   3) Bring Boulder forward
+        //   4) Show a fullscreen lockout overlay the user can't miss
+        //   5) Crumble + notify (cooldown only on the pixel cost so
+        //      we don't drain 3px/sec on a rapid-fire mash)
         runningApp.hide()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak runningApp] in
+            runningApp?.hide()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak runningApp] in
+            runningApp?.hide()
+        }
+
+        NSApp.activate(ignoringOtherApps: true)
+        NotificationCenter.default.post(name: .boulderShowPopover, object: nil)
+        FocusLockoutWindow.show(appName: match.displayName, pixelsLost: pixelsPerCrumble)
 
         let now = Date()
         guard now.timeIntervalSince(lastCrumbleAt) >= cooldown else { return }
         lastCrumbleAt = now
-
-        NSLog("Boulder: blocked app activated — \(match.displayName) (\(bid)); hiding it + crumbling \(pixelsPerCrumble) px")
-
-        NSApp.activate(ignoringOtherApps: true)
-        // Show the popover so the user immediately sees the shake +
-        // the -N px floater. Notification posted via NotificationCenter
-        // because AppDelegate owns the popover and we don't have a
-        // direct ref here.
-        NotificationCenter.default.post(name: .boulderShowPopover, object: nil)
-
+        NSLog("Boulder: blocked app activated — \(match.displayName) (\(bid)); hiding + crumbling \(pixelsPerCrumble) px")
         store.crumble(pixels: pixelsPerCrumble)
         notifyCrumble(appName: match.displayName)
     }

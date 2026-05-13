@@ -8,6 +8,27 @@
     <description>Most recent Boulder releases.</description>
     <language>en</language>
     <item>
+      <title>v1.4.8</title>
+      <pubDate>Wed, 13 May 2026 05:25:00 +0000</pubDate>
+      <sparkle:version>1.4.8</sparkle:version>
+      <sparkle:shortVersionString>1.4.8</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <ul>
+          <li><strong>Harder app blocker.</strong> Tabbing to a blocked app now hides it on EVERY activation (no cooldown — keep tabbing, it keeps vanishing). Three hides over 0.5s in case the app tries to restore itself.</li>
+          <li><strong>Fullscreen lockout overlay.</strong> Big red "🪨 BLOCKED" panel pops up center-screen with the pixel cost. Auto-dismisses after 2 seconds. You can't miss it.</li>
+          <li><strong>Honest scope note:</strong> macOS gates real OS-level app blocking behind FamilyControls entitlements Apple only grants to approved parental-control apps. This is the strongest non-destructive blocking an indie app can ship.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.4.8/Boulder.dmg"
+        sparkle:version="1.4.8"
+        sparkle:shortVersionString="1.4.8"
+        length="2142583"
+        type="application/octet-stream"
+        sparkle:edSignature="zSdWOQYv5wCHlIrKs4LXc5PT6RCesfdwgg+z73mkXT3SYYz+f5KoVN/6i+oGxnB2JKjoHPTdpWwagyVIZA+GAw==" />
+    </item>
+    <item>
       <title>v1.4.7</title>
       <pubDate>Wed, 13 May 2026 05:10:00 +0000</pubDate>
       <sparkle:version>1.4.7</sparkle:version>
