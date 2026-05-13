@@ -115,11 +115,35 @@ struct PopoverContentView: View {
                 momentumPill
                     .transition(.scale(scale: 0.85).combined(with: .opacity))
             }
+            if store.pendingPixelCount > 0 && store.isFocusing {
+                pendingBadge
+                    .transition(.scale(scale: 0.7).combined(with: .opacity))
+            }
             Text("\(store.model.pixelCount) px")
                 .font(.caption.monospacedDigit().weight(.medium))
                 .foregroundStyle(.white.opacity(0.55))
         }
         .animation(.easeOut(duration: 0.2), value: store.isFocusing)
+        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: store.pendingPixelCount)
+    }
+
+    /// "+N pending" badge that floats next to the momentum pill while
+    /// pixels accumulate during a session. Pixels don't land on the
+    /// rock until you stop — this is the user's only indication they're
+    /// banking up. Pulses gently on each increment.
+    private var pendingBadge: some View {
+        Text("+\(store.pendingPixelCount) px")
+            .font(.caption2.monospacedDigit().weight(.heavy))
+            .foregroundStyle(Color(hex: 0xFFD960))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(
+                Capsule()
+                    .fill(Color(hex: 0xFFD960).opacity(0.12))
+                    .overlay(
+                        Capsule().stroke(Color(hex: 0xFFD960).opacity(0.35), lineWidth: 0.8)
+                    )
+            )
     }
 
     private var tierSubtitle: String {
@@ -199,10 +223,13 @@ struct PopoverContentView: View {
                 BoulderRenderer(
                     pixels: store.model.pixels,
                     paletteFor: { store.palette(for: $0) },
-                    onPixelTap: handlePixelTap
+                    onPixelTap: handlePixelTap,
+                    flushState: store.flushState
                 )
                 .frame(maxWidth: .infinity)
                 .frame(height: 180)
+                .scaleEffect(store.flushState == nil ? 1.0 : 1.12)
+                .animation(.easeInOut(duration: 0.45), value: store.flushState)
                 .offset(x: shake)
             }
             if crumblePop {
@@ -806,6 +833,10 @@ struct PopoverContentView: View {
     private struct PixelInspection {
         let tag: FocusTag?
         let session: FocusSession?
+        /// The exact moment this pixel was earned. Falls back to the
+        /// session's startedAt for legacy pixels (pre-v1.4.3) that
+        /// don't carry their own date.
+        let earnedAt: Date?
     }
 
     private func handlePixelTap(_ index: Int?) {
@@ -813,9 +844,11 @@ struct PopoverContentView: View {
             inspector = nil; return
         }
         let p = store.model.pixels[i]
+        let session = store.session(forID: p.sessionID)
         let info = PixelInspection(
             tag: store.tag(forID: p.tagID),
-            session: store.session(forID: p.sessionID)
+            session: session,
+            earnedAt: p.earnedAt ?? session?.startedAt
         )
         withAnimation(.easeOut(duration: 0.15)) { inspector = info }
         DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) {
@@ -842,16 +875,21 @@ struct PopoverContentView: View {
                 }
                 .buttonStyle(.plain)
             }
+            // Date — every pixel now stamps its earned-at on creation.
+            if let when = info.earnedAt {
+                Text(formatPixelDate(when))
+                    .font(.caption2.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(Color(hex: 0xFFD960))
+            }
             if let session = info.session {
                 Text(session.blurb.isEmpty ? "(no description)" : session.blurb)
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.85))
-                HStack(spacing: 6) {
-                    Text(formatDate(session.startedAt))
-                    if session.gaveUp { Text("· gave up").foregroundStyle(Color(hex: 0xFF6B6B)) }
+                if session.gaveUp {
+                    Text("gave up early")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color(hex: 0xFF6B6B))
                 }
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.white.opacity(0.4))
             } else if let blurb = info.tag?.blurb, !blurb.isEmpty {
                 Text(blurb)
                     .font(.caption2)
@@ -891,6 +929,25 @@ struct PopoverContentView: View {
     }
 
     // MARK: Formatters
+
+    /// Relative + absolute date for a single pixel ("2h ago · May 12,
+    /// 8:34 PM"). Recent pixels read as recent; old ones get a full
+    /// date so the user can see how long Boulder has been growing.
+    private func formatPixelDate(_ d: Date) -> String {
+        let now = Date()
+        let interval = now.timeIntervalSince(d)
+        let absFmt = DateFormatter()
+        if interval < 60 * 60 * 24 {
+            absFmt.dateFormat = "h:mm a"
+        } else if interval < 60 * 60 * 24 * 7 {
+            absFmt.dateFormat = "EEE · h:mm a"
+        } else {
+            absFmt.dateFormat = "MMM d, yyyy · h:mm a"
+        }
+        let rel = RelativeDateTimeFormatter()
+        rel.unitsStyle = .short
+        return "\(rel.localizedString(for: d, relativeTo: now)) · \(absFmt.string(from: d))"
+    }
 
     private func formatHMS(_ total: Int) -> String {
         let s = max(0, total)

@@ -20,55 +20,48 @@ enum MenubarIcon {
     /// Render the menubar icon. `paletteFor` MUST be safe to call on
     /// the caller's actor — we invoke it inline during render(), not
     /// inside the drawing handler.
+    /// Render the menubar icon as a TEMPLATE image — pure black pixels
+    /// with a subtle two-tier alpha (body / crown) so macOS auto-tints
+    /// it for light/dark mode the same way it does built-in symbols
+    /// (the paw, the moon, the diamond). AppDelegate sets isTemplate
+    /// = true on the result. Keeps Boulder's asymmetric pixel silhouette
+    /// as the brand identity while looking system-native.
+    ///
+    /// The `pixels` and `paletteFor` parameters are accepted for API
+    /// compatibility with earlier versions but intentionally unused —
+    /// a template icon is monochrome by definition.
     static func render(
-        pixels: [BoulderPixel],
+        pixels: [BoulderPixel] = [],
         paletteFor: (BoulderPixel) -> [Color] = { p in
             p.legacyType?.palette ?? BoulderRenderer.fallbackPalette
         }
     ) -> NSImage {
-        let widthPt:  CGFloat = 28
-        let heightPt: CGFloat = 22
-
-        // Index user pixels by their (x,y) so we can match them
-        // against the logo silhouette cells.
-        let userByCoord: [String: BoulderPixel] = Dictionary(
-            uniqueKeysWithValues: pixels.prefix(MenubarBoulder.cells.count).map { p in
-                ("\(p.x),\(p.y)", p)
-            }
-        )
-
-        // Pre-resolve every silhouette cell's color HERE (on the
-        // caller's actor) so the drawing handler doesn't touch any
-        // actor-isolated state.
-        let baseGranite: [CGColor] = MenubarBoulder.granite.map { $0.cgColor }
-        let resolvedColors: [CGColor] = MenubarBoulder.cells.map { c in
-            if let p = userByCoord["\(c.x),\(c.y)"] {
-                let pal = paletteFor(p)
-                let shadeIdx = min(pal.count - 1, max(0, p.shade))
-                return NSColor(pal[shadeIdx]).cgColor
-            }
-            return baseGranite[min(baseGranite.count - 1, max(0, c.shade))]
-        }
-
-        // The drawing handler captures only stable, thread-safe data:
-        // the precomputed cells + the resolved color array. Safe to
-        // invoke from any thread AppKit chooses.
+        _ = pixels        // unused — template icon is monochrome
+        _ = paletteFor    // unused
+        let widthPt:  CGFloat = 22
+        let heightPt: CGFloat = 20
         let cells = MenubarBoulder.cells
+        // Pixels above this y are "crown" and render slightly
+        // translucent — gives the icon a hint of 3D volume without
+        // breaking the template-tint convention.
+        let crownThreshold = MenubarBoulder.crownThreshold
+
         return NSImage(
             size: NSSize(width: widthPt, height: heightPt),
-            flipped: false   // CG-style: bottom-left origin, y grows up
+            flipped: false
         ) { _ in
             guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
             ctx.setShouldAntialias(false)
             ctx.interpolationQuality = .none
 
             let cx: CGFloat = widthPt / 2
-            let baseY: CGFloat = 4
+            let baseY: CGFloat = 3
 
-            for (i, c) in cells.enumerated() {
+            for c in cells {
                 let x = cx + CGFloat(c.x)
                 let y = baseY + CGFloat(c.y)
-                ctx.setFillColor(resolvedColors[i])
+                let alpha: CGFloat = (c.y >= crownThreshold) ? 0.55 : 1.0
+                ctx.setFillColor(CGColor(gray: 0, alpha: alpha))
                 ctx.fill(CGRect(x: x, y: y, width: 1, height: 1))
             }
             return true
@@ -86,8 +79,16 @@ enum MenubarBoulder {
 
     static let cells: [Cell] = computeCells()
 
-    /// 4-shade granite ramp. NSColors so we can call .cgColor on
-    /// MainActor before passing into the drawing handler.
+    /// y-coordinate above which cells are considered "crown" and
+    /// render at lower alpha to suggest volumetric shading inside
+    /// the template-tinted silhouette. Computed from the cell array.
+    static let crownThreshold: Int = {
+        let maxY = computeCells().map { $0.y }.max() ?? 0
+        return Int(Double(maxY) * 0.72)
+    }()
+
+    /// 4-shade granite ramp (kept for backwards compat with any
+    /// non-template callers; the template renderer ignores it).
     static let granite: [NSColor] = [
         NSColor(srgbRed: 0.21, green: 0.21, blue: 0.24, alpha: 1.0),
         NSColor(srgbRed: 0.31, green: 0.32, blue: 0.36, alpha: 1.0),

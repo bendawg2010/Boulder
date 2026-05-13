@@ -34,12 +34,17 @@ struct BoulderPixel: Codable, Hashable {
     var legacyType: FocusType? = nil
     /// 0..3 index into the palette of either the tag or legacyType.
     var shade: Int
+    /// New (v1.4.3+) — the moment this pixel was earned. Nil for
+    /// legacy pixels emitted before we tracked per-pixel dates;
+    /// those can still be dated via session.startedAt as a fallback.
+    /// Stamped in BoulderStore.emitPixel().
+    var earnedAt: Date? = nil
 
     // Backwards-compat decoder: old payloads encoded `type` (FocusType)
     // as a required field. We accept either `type` or `legacyType`,
     // and store the result in `legacyType`.
     private enum CodingKeys: String, CodingKey {
-        case x, y, tagID, sessionID, legacyType, type, shade
+        case x, y, tagID, sessionID, legacyType, type, shade, earnedAt
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -48,6 +53,7 @@ struct BoulderPixel: Codable, Hashable {
         self.shade = try c.decode(Int.self, forKey: .shade)
         self.tagID = try c.decodeIfPresent(UUID.self, forKey: .tagID)
         self.sessionID = try c.decodeIfPresent(UUID.self, forKey: .sessionID)
+        self.earnedAt = try c.decodeIfPresent(Date.self, forKey: .earnedAt)
         if let legacy = try c.decodeIfPresent(FocusType.self, forKey: .legacyType) {
             self.legacyType = legacy
         } else {
@@ -55,10 +61,11 @@ struct BoulderPixel: Codable, Hashable {
         }
     }
     init(x: Int, y: Int, tagID: UUID?, sessionID: UUID?, shade: Int,
-         legacyType: FocusType? = nil) {
+         legacyType: FocusType? = nil, earnedAt: Date? = nil) {
         self.x = x; self.y = y
         self.tagID = tagID; self.sessionID = sessionID
         self.shade = shade; self.legacyType = legacyType
+        self.earnedAt = earnedAt
     }
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -68,6 +75,7 @@ struct BoulderPixel: Codable, Hashable {
         try c.encodeIfPresent(tagID, forKey: .tagID)
         try c.encodeIfPresent(sessionID, forKey: .sessionID)
         try c.encodeIfPresent(legacyType, forKey: .legacyType)
+        try c.encodeIfPresent(earnedAt, forKey: .earnedAt)
     }
 }
 

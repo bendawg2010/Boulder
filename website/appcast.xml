@@ -8,6 +8,29 @@
     <description>Most recent Boulder releases.</description>
     <language>en</language>
     <item>
+      <title>v1.4.3</title>
+      <pubDate>Wed, 13 May 2026 03:00:00 +0000</pubDate>
+      <sparkle:version>1.4.3</sparkle:version>
+      <sparkle:shortVersionString>1.4.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <ul>
+          <li><strong>Pixels pour in when you stop.</strong> Pixels now accumulate INVISIBLY during focus. The popover shows a "+N px pending" gold capsule next to the momentum pill so you still see momentum. Press Stop and the boulder zooms in 12%, all your pending pixels pour in one-by-one with a stagger + fade, then it zooms back out. One satisfying reveal per session.</li>
+          <li><strong>Per-pixel dates.</strong> Every pixel now records the exact moment it was earned. Click a pixel and the inspector overlay shows the earned-at timestamp ("2 hr ago · 8:34 PM" / "Mon · 8:34 PM" / "May 12, 2026 · 8:34 PM" depending on age). Foundation for a calendar heatmap.</li>
+          <li><strong>Template menubar icon.</strong> The menubar 🪨 is now a system-tinted template (matches Bear's paw, Apple's symbols). Auto-flips black/white for light/dark mode. Cleaner look in the menubar, same Boulder identity.</li>
+          <li><strong>Give-up forfeits escrow.</strong> Give up during a committed session and you lose the entire pending escrow (those pixels never land). Floor of 5 — short-tap-Focus-then-Give-Up still costs you. The button label updates dynamically.</li>
+          <li><strong>Completion bonus rides the pour.</strong> When a committed timer naturally hits 0, the bonus pixels join the pending escrow and ride the same pour-in animation. One reveal, not two.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.4.3/Boulder.dmg"
+        sparkle:version="1.4.3"
+        sparkle:shortVersionString="1.4.3"
+        length="2063598"
+        type="application/octet-stream"
+        sparkle:edSignature="6W3N0p6UxUQ/g+i0hKzZF/HAXDMmEXtJE0v3qbUJ1IJ2jtybnYO56pt2BypdVwgtxR/LFFvJp47t51nSS/kpDw==" />
+    </item>
+    <item>
       <title>v1.4.2</title>
       <pubDate>Tue, 12 May 2026 02:15:00 +0000</pubDate>
       <sparkle:version>1.4.2</sparkle:version>

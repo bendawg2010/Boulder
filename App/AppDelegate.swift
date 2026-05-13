@@ -76,7 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.image = MenubarIcon.render(pixels: [], paletteFor: { [weak self] in
                 self?.store.palette(for: $0) ?? BoulderRenderer.fallbackPalette
             })
-            button.image?.isTemplate = false   // colored rock, not a template
+            button.image?.isTemplate = true    // template — macOS tints for light/dark
             button.imagePosition = .imageOnly
             button.action = #selector(togglePopover(_:))
             button.target = self
@@ -90,7 +90,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let img = MenubarIcon.render(pixels: pixels, paletteFor: { [weak self] in
             self?.store.palette(for: $0) ?? BoulderRenderer.fallbackPalette
         })
-        img.isTemplate = false
+        img.isTemplate = true
         button.image = img
         // Tooltip: human-readable status. Helps the user remember
         // there's a rock living in their menubar and what tier it is.

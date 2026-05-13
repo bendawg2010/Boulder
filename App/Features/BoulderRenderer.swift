@@ -43,55 +43,92 @@ struct BoulderRenderer: View {
     /// the tap point, or nil if the tap missed every pixel.
     var onPixelTap: ((Int?) -> Void)? = nil
 
+    /// Pour-in animation state. When non-nil, pixels with index >=
+    /// `firstNewIndex` fade + scale in staggered by `stagger` seconds
+    /// from `startedAt`. Caller (PopoverContentView) reads this from
+    /// the store and forwards it.
+    var flushState: BoulderStore.FlushState? = nil
+
     @State private var lastSize: CGSize = .zero
 
     var body: some View {
         GeometryReader { geo in
-            Canvas { ctx, size in
-                guard !pixels.isEmpty else { return }
-                let (cell, cx, baselineY) = layout(in: size)
+            // TimelineView keeps the Canvas redrawing while a flush
+            // animation is in progress. Steady-state has no schedule
+            // changes so the canvas only repaints when pixels change.
+            TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: flushState == nil)) { timeline in
+                Canvas { ctx, size in
+                    guard !pixels.isEmpty else { return }
+                    let (cell, cx, baselineY) = layout(in: size)
+                    let now = timeline.date
 
-                // Cast shadow — painted BEFORE the boulder so the rock
-                // sits on top of it. Soft ellipse, slightly wider than
-                // the boulder, just below the baseline.
-                if shadowBelow {
-                    let maxAbsX = pixels.reduce(0) { max($0, abs($1.x)) }
-                    let halfW = CGFloat(maxAbsX + 1) * cell
-                    let shadowW = halfW * 2.0 * 1.10
-                    let shadowH = max(cell * 1.4, cell * 2.2)
-                    let shadowRect = CGRect(
-                        x: cx - shadowW / 2,
-                        y: baselineY - shadowH * 0.30,
-                        width: shadowW,
-                        height: shadowH
-                    )
-                    // Inner darker oval, outer falloff for soft edge.
-                    let shadowPath = Path(ellipseIn: shadowRect)
-                    ctx.fill(shadowPath, with: .color(Color.black.opacity(0.28)))
-                    let outerRect = shadowRect.insetBy(dx: -cell * 0.6, dy: -cell * 0.25)
-                    let outerPath = Path(ellipseIn: outerRect)
-                    ctx.blendMode = .multiply
-                    ctx.fill(outerPath, with: .color(Color.black.opacity(0.10)))
-                    ctx.blendMode = .normal
-                }
-
-                if groundLine {
-                    var dust = Path()
-                    dust.move(to: CGPoint(x: 8, y: baselineY + cell * 0.5))
-                    dust.addLine(to: CGPoint(x: size.width - 8, y: baselineY + cell * 0.5))
-                    ctx.stroke(dust, with: .color(Color.white.opacity(0.12)), lineWidth: 1)
-                }
-
-                for p in pixels {
-                    let rect = rectFor(p, cell: cell, cx: cx, baselineY: baselineY)
-                    let palette = paletteFor(p)
-                    var color = palette[max(0, min(palette.count - 1, p.shade))]
-                    // Moss tint: blend toward olive-green for cells
-                    // flagged as moss in BoulderShape.mossCoords.
-                    if BoulderShape.isMoss(p.x, p.y) {
-                        color = Self.tintMoss(color)
+                    // Cast shadow — painted BEFORE the boulder so the
+                    // rock sits on top of it.
+                    if shadowBelow {
+                        let maxAbsX = pixels.reduce(0) { max($0, abs($1.x)) }
+                        let halfW = CGFloat(maxAbsX + 1) * cell
+                        let shadowW = halfW * 2.0 * 1.10
+                        let shadowH = max(cell * 1.4, cell * 2.2)
+                        let shadowRect = CGRect(
+                            x: cx - shadowW / 2,
+                            y: baselineY - shadowH * 0.30,
+                            width: shadowW,
+                            height: shadowH
+                        )
+                        let shadowPath = Path(ellipseIn: shadowRect)
+                        ctx.fill(shadowPath, with: .color(Color.black.opacity(0.28)))
+                        let outerRect = shadowRect.insetBy(dx: -cell * 0.6, dy: -cell * 0.25)
+                        let outerPath = Path(ellipseIn: outerRect)
+                        ctx.blendMode = .multiply
+                        ctx.fill(outerPath, with: .color(Color.black.opacity(0.10)))
+                        ctx.blendMode = .normal
                     }
-                    ctx.fill(Path(rect), with: .color(color))
+
+                    if groundLine {
+                        var dust = Path()
+                        dust.move(to: CGPoint(x: 8, y: baselineY + cell * 0.5))
+                        dust.addLine(to: CGPoint(x: size.width - 8, y: baselineY + cell * 0.5))
+                        ctx.stroke(dust, with: .color(Color.white.opacity(0.12)), lineWidth: 1)
+                    }
+
+                    for (i, p) in pixels.enumerated() {
+                        // Pour-in: pixels at flushState.firstNewIndex+
+                        // stagger in over ~0.35s each, with optional
+                        // scale-up + fade. If we haven't reached this
+                        // pixel's start time yet, skip it.
+                        var opacity: Double = 1.0
+                        var scale: CGFloat = 1.0
+                        if let f = flushState, i >= f.firstNewIndex {
+                            let offset = Double(i - f.firstNewIndex) * f.stagger
+                            let elapsed = now.timeIntervalSince(f.startedAt) - offset
+                            if elapsed < 0 { continue }   // not yet visible
+                            let fadeIn: Double = 0.35
+                            if elapsed < fadeIn {
+                                let t = elapsed / fadeIn
+                                opacity = t
+                                scale = 0.55 + 0.45 * t
+                            }
+                        }
+
+                        let rect = rectFor(p, cell: cell, cx: cx, baselineY: baselineY)
+                        let scaledRect: CGRect
+                        if scale != 1.0 {
+                            let dx = rect.width * (1 - scale) / 2
+                            let dy = rect.height * (1 - scale) / 2
+                            scaledRect = rect.insetBy(dx: dx, dy: dy)
+                        } else {
+                            scaledRect = rect
+                        }
+
+                        let palette = paletteFor(p)
+                        var color = palette[max(0, min(palette.count - 1, p.shade))]
+                        if BoulderShape.isMoss(p.x, p.y) {
+                            color = Self.tintMoss(color)
+                        }
+                        var ctxCopy = ctx
+                        ctxCopy.opacity = opacity
+                        ctxCopy.fill(Path(scaledRect), with: .color(color))
+                    }
                 }
             }
             .drawingGroup()

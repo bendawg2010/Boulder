@@ -47,6 +47,35 @@ final class BoulderStore: ObservableObject {
     /// (timer reaches 0). Popover plays a golden flash.
     @Published var completionFlashAt: Date? = nil
 
+    /// Pixels EARNED during the running session that haven't been
+    /// "minted" onto Boulder yet. The renderer doesn't see these —
+    /// the user only sees the rock change on stop, when these flush
+    /// in with the pour-in animation. During focus the popover shows
+    /// "+N px pending" so the user still feels momentum.
+    @Published var pendingPixelCount: Int = 0
+
+    /// Set when stopFocus / completion / give-up flushes pending
+    /// pixels onto the rock. Renderer reads this to animate the new
+    /// pixels appearing one by one with a zoom-in / fade-in effect.
+    /// Cleared automatically after the animation duration.
+    @Published var flushState: FlushState? = nil
+
+    /// One flush event — describes which pixel-array indices are
+    /// "new" and when the animation started so the renderer can stage
+    /// per-pixel opacity/scale.
+    struct FlushState: Equatable {
+        let firstNewIndex: Int
+        let count: Int
+        let startedAt: Date
+        /// Seconds between each pixel's appearance.
+        let stagger: TimeInterval
+        /// Total animation duration including the trailing pause.
+        var totalDuration: TimeInterval {
+            // pixel-fade-in window (0.35s) + stagger * (count - 1) + 0.6s zoom-out tail
+            return 0.35 + stagger * Double(max(0, count - 1)) + 0.6
+        }
+    }
+
     // MARK: Init / persistence
 
     private init() {
@@ -86,10 +115,13 @@ final class BoulderStore: ObservableObject {
         guard isFocusing else { return }
         sessionElapsed += 1
 
+        // Accumulate pending pixels — do NOT mint them onto the rock
+        // until the user stops focusing. Keeps the visual reveal for
+        // the pour-in animation in stopFocus().
         model.pixelAccumulator += PIXELS_PER_SECOND * currentMultiplier
         while model.pixelAccumulator >= 1.0 {
             model.pixelAccumulator -= 1.0
-            emitPixel()
+            pendingPixelCount += 1
         }
         if Int(sessionElapsed) % 30 == 0 { persist() }
 
@@ -120,7 +152,8 @@ final class BoulderStore: ObservableObject {
             x: cell.x, y: cell.y,
             tagID: selectedTagID,
             sessionID: currentSessionID,
-            shade: cell.shade
+            shade: cell.shade,
+            earnedAt: Date()
         ))
     }
 
@@ -173,8 +206,10 @@ final class BoulderStore: ObservableObject {
 
     /// Normal stop — open-ended session, or a committed session that
     /// the user is allowed to end. Closes the record, no penalty.
+    /// FLUSHES pending pixels onto the rock with the pour-in animation.
     func stopFocus() {
         isFocusing = false
+        flushPendingPixels()
         if let sid = currentSessionID,
            let idx = model.sessions.firstIndex(where: { $0.id == sid }) {
             model.sessions[idx].endedAt = Date()
@@ -187,38 +222,84 @@ final class BoulderStore: ObservableObject {
         persist()
     }
 
-    /// Number of pixels a give-up costs RIGHT NOW for the current
-    /// committed session. 25% of pixels earned this session, floor 5.
+    /// Mints all pendingPixelCount pixels onto the rock and triggers
+    /// the pour-in animation. Clears pendingPixelCount and sets
+    /// flushState so BoulderRenderer staggers the new pixels' fade-in.
+    /// Schedules a cleanup that nils flushState after the animation.
+    private func flushPendingPixels() {
+        let count = pendingPixelCount
+        pendingPixelCount = 0
+        guard count > 0 else { return }
+        let firstNewIndex = model.pixels.count
+        for _ in 0..<count { emitPixel() }
+        // Stagger between pixels: visible up to ~2.5s total. Faster
+        // when there are many pixels so a long session doesn't sit
+        // through a glacial reveal.
+        let stagger = min(0.08, max(0.015, 2.0 / Double(count)))
+        let f = FlushState(
+            firstNewIndex: firstNewIndex,
+            count: count,
+            startedAt: Date(),
+            stagger: stagger
+        )
+        flushState = f
+        // Clear flushState after the animation finishes so the
+        // renderer goes back to its steady-state path.
+        let cleanup = f.totalDuration + 0.4
+        DispatchQueue.main.asyncAfter(deadline: .now() + cleanup) { [weak self] in
+            guard let self else { return }
+            if self.flushState == f { self.flushState = nil }
+        }
+    }
+
+    /// Number of pixels a give-up costs RIGHT NOW. Equals the
+    /// pendingPixelCount earned during this session (which never made
+    /// it onto the rock because we hold them until stop). Give up =
+    /// forfeit the entire escrow. Floor 5 so a 30-second tap-Focus-
+    /// tap-Give-Up doesn't escape free.
     var giveUpPenalty: Int {
-        guard let sid = currentSessionID else { return 0 }
-        let earned = model.pixels.filter { $0.sessionID == sid }.count
-        return max(5, Int(Double(earned) * 0.25))
+        max(5, pendingPixelCount)
     }
 
     /// User pressed "Give up" on a committed session before the
-    /// timer ran out. Marks the session as abandoned, crumbles a
-    /// penalty off Boulder, then stops normally. Penalty is capped
-    /// by what was earned + a small floor — Boulder can lose pixels
-    /// you earned this session, but not pixels from before.
+    /// timer ran out. Forfeits the pending pixel escrow (no pour-in,
+    /// no animation — they're just GONE) and marks the session
+    /// abandoned. If the escrow was smaller than the floor, the
+    /// difference comes off the rock as a real crumble.
     func giveUpEarly() {
         guard let sid = currentSessionID else { stopFocus(); return }
-        let penalty = giveUpPenalty
         if let idx = model.sessions.firstIndex(where: { $0.id == sid }) {
             model.sessions[idx].gaveUp = true
         }
-        crumble(pixels: penalty)
-        stopFocus()
+        let forfeited = pendingPixelCount
+        pendingPixelCount = 0     // forfeit escrow — never minted
+        let shortfall = max(0, 5 - forfeited)
+        if shortfall > 0 {
+            crumble(pixels: shortfall)  // make up the floor from the rock
+        }
+        // Skip flushPendingPixels (count is now 0). Just close session.
+        isFocusing = false
+        if let idx = model.sessions.firstIndex(where: { $0.id == sid }) {
+            model.sessions[idx].endedAt = Date()
+            let earned = model.pixels.filter { $0.sessionID == sid }.count
+            model.sessions[idx].pixelsGrown = earned
+        }
+        currentSessionID = nil
+        draftBlurb = ""
+        draftDuration = nil
+        persist()
     }
 
-    /// Committed session reached its planned duration. Adds a small
-    /// completion bonus and emits a completion-flash signal for the
-    /// UI to celebrate.
+    /// Committed session reached its planned duration. Adds the
+    /// bonus pixels to the pending escrow, then stops normally —
+    /// the bonus rides the same pour-in animation as the regular
+    /// pending pixels (so the user sees ONE big satisfying reveal,
+    /// not two animations stacked).
     private func completeCommittedSession() {
         guard isFocusing else { return }
-        // Bonus pixels: 5 + 1 per 5 minutes committed (capped at 25).
         let target = currentPlannedDuration ?? 0
         let bonus = min(25, 5 + Int(target / 300))
-        for _ in 0..<bonus { emitPixel() }
+        pendingPixelCount += bonus
         completionFlashAt = Date()
         stopFocus()
     }
