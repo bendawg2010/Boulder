@@ -141,6 +141,60 @@ struct BoulderModel: Codable {
     /// click-to-inspect feature.
     var sessions: [FocusSession] = []
 
+    // MARK: Backward-compat Codable
+    //
+    // Swift's synthesized Codable does NOT honor Swift default values
+    // during decode — any non-Optional field missing from the JSON
+    // throws. v1.7.0 added cloudSyncEnabled (Bool) and that broke
+    // every existing state.json file, silently nuking users' rocks.
+    // Hand-rolled init/encode below uses decodeIfPresent everywhere
+    // so old saves continue to load and new fields default to their
+    // declared values.
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion, id, startedAt, pixels, pixelAccumulator,
+             range, blockedApps, tags, sessions,
+             userFirstName, rockName, appleUserID, syncID, cloudSyncEnabled
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.schemaVersion    = (try? c.decodeIfPresent(Int.self, forKey: .schemaVersion)) ?? 2
+        self.id               = (try? c.decodeIfPresent(UUID.self, forKey: .id)) ?? UUID()
+        self.startedAt        = (try? c.decodeIfPresent(Date.self, forKey: .startedAt)) ?? Date()
+        self.pixels           = (try? c.decodeIfPresent([BoulderPixel].self, forKey: .pixels)) ?? []
+        self.pixelAccumulator = (try? c.decodeIfPresent(Double.self, forKey: .pixelAccumulator)) ?? 0
+        self.range            = (try? c.decodeIfPresent([RetiredBoulder].self, forKey: .range)) ?? []
+        self.blockedApps      = (try? c.decodeIfPresent([BlockedApp].self, forKey: .blockedApps)) ?? []
+        self.tags             = (try? c.decodeIfPresent([FocusTag].self, forKey: .tags)) ?? []
+        self.sessions         = (try? c.decodeIfPresent([FocusSession].self, forKey: .sessions)) ?? []
+        self.userFirstName    = try? c.decodeIfPresent(String.self, forKey: .userFirstName)
+        self.rockName         = try? c.decodeIfPresent(String.self, forKey: .rockName)
+        self.appleUserID      = try? c.decodeIfPresent(String.self, forKey: .appleUserID)
+        self.syncID           = try? c.decodeIfPresent(UUID.self, forKey: .syncID)
+        self.cloudSyncEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .cloudSyncEnabled)) ?? false
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(schemaVersion, forKey: .schemaVersion)
+        try c.encode(id, forKey: .id)
+        try c.encode(startedAt, forKey: .startedAt)
+        try c.encode(pixels, forKey: .pixels)
+        try c.encode(pixelAccumulator, forKey: .pixelAccumulator)
+        try c.encode(range, forKey: .range)
+        try c.encode(blockedApps, forKey: .blockedApps)
+        try c.encode(tags, forKey: .tags)
+        try c.encode(sessions, forKey: .sessions)
+        try c.encodeIfPresent(userFirstName, forKey: .userFirstName)
+        try c.encodeIfPresent(rockName, forKey: .rockName)
+        try c.encodeIfPresent(appleUserID, forKey: .appleUserID)
+        try c.encodeIfPresent(syncID, forKey: .syncID)
+        try c.encode(cloudSyncEnabled, forKey: .cloudSyncEnabled)
+    }
+
     /// First name the user entered during onboarding. Used in the
     /// share page byline ("<rockName> by <userFirstName>"). Nil
     /// until the first-launch sheet is completed; the presence of

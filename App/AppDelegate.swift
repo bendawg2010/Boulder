@@ -180,13 +180,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Settings window
 
     func openSettings() {
+        // Accessory-policy apps can't reliably bring their own windows
+        // forward — temporarily promote to .regular while a window is
+        // visible. We downgrade again when the last auxiliary window
+        // closes (see `windowsAuxClosed`).
+        promoteToRegularIfNeeded()
         if let win = settingsWindow {
+            win.center()
             NSApp.activate(ignoringOtherApps: true)
             win.makeKeyAndOrderFront(nil)
             return
         }
         let win = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 540),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 580),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -199,6 +205,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 .environmentObject(self)
         )
         win.isReleasedWhenClosed = false
+        win.delegate = self
         settingsWindow = win
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
@@ -207,7 +214,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Gallery window
 
     func openGallery() {
+        promoteToRegularIfNeeded()
         if let win = galleryWindow {
+            win.center()
             NSApp.activate(ignoringOtherApps: true)
             win.makeKeyAndOrderFront(nil)
             return
@@ -224,9 +233,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             rootView: MountainRangeView().environmentObject(store)
         )
         win.isReleasedWhenClosed = false
+        win.delegate = self
         galleryWindow = win
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
+    }
+
+    // MARK: - Activation policy
+
+    private func promoteToRegularIfNeeded() {
+        if NSApp.activationPolicy() != .regular {
+            NSApp.setActivationPolicy(.regular)
+        }
+    }
+    private func demoteToAccessoryIfQuiet() {
+        let settingsOpen = settingsWindow?.isVisible ?? false
+        let galleryOpen  = galleryWindow?.isVisible ?? false
+        if !settingsOpen && !galleryOpen {
+            NSApp.setActivationPolicy(.accessory)
+        }
     }
 
     @objc func quit(_ sender: Any?) {
@@ -242,3 +267,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 extension AppDelegate: ObservableObject {}
+
+extension AppDelegate: NSWindowDelegate {
+    /// Called when Settings or Gallery is closed via the red X — we
+    /// downgrade back to .accessory so the menubar app doesn't keep
+    /// stealing focus / appearing in cmd-tab.
+    func windowWillClose(_ notification: Notification) {
+        // Defer one runloop tick so isVisible reflects the close.
+        DispatchQueue.main.async { [weak self] in
+            self?.demoteToAccessoryIfQuiet()
+        }
+    }
+}

@@ -7,6 +7,23 @@
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <item>
+      <title>v1.7.1</title>
+      <pubDate>Thu, 14 May 2026 20:29:07 +0000</pubDate>
+      <sparkle:version>1.7.1</sparkle:version>
+      <sparkle:shortVersionString>1.7.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        URGENT FIX: v1.7.0 added a non-Optional Bool field that broke Codable for every existing save — your rock looked like it disappeared (it was still on disk, just not loading). Hand-rolled the decoder so v1.6 saves load correctly and new fields default. Settings + Gallery buttons now reliably focus their window (was a .accessory activation-policy issue). Softer SIWA fallback copy. Better Windows CTA. For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.7.1/Boulder.dmg"
+        sparkle:version="1.7.1"
+        sparkle:shortVersionString="1.7.1"
+        length="2314527"
+        type="application/octet-stream"
+        sparkle:edSignature="8oZvQB5Yb/7xMD02qfENu+VEMqXpkdJNB3ZF0qb2n7oMeWEE3oi4gekFaO+RWPVn/jOeSPTgqD1nhLvjA0QFDQ==" />
+    </item>
+    <item>
       <title>v1.7.0</title>
       <pubDate>Thu, 14 May 2026 20:07:01 +0000</pubDate>
       <sparkle:version>1.7.0</sparkle:version>

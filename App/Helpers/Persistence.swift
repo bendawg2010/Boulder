@@ -19,15 +19,48 @@ enum Persistence {
         return dir.appendingPathComponent("state.json")
     }
 
+    /// True when load() last refused to decode the file on disk. While
+    /// this is set, save() refuses to overwrite the existing file so a
+    /// migration bug can never silently nuke the user's rock. Cleared
+    /// after the first successful save (which can only happen with a
+    /// model the app constructed legitimately — e.g. completed
+    /// onboarding on a fresh BoulderModel).
+    private static var loadFailedSinceLaunch = false
+
     static func load() -> BoulderModel? {
         guard let data = try? Data(contentsOf: fileURL) else { return nil }
-        return try? JSONDecoder().decode(BoulderModel.self, from: data)
+        do {
+            return try JSONDecoder().decode(BoulderModel.self, from: data)
+        } catch {
+            NSLog("Boulder: state.json decode failed: \(error). Skipping load — file preserved on disk.")
+            loadFailedSinceLaunch = true
+            // Snapshot the file before the user can possibly lose it
+            // so we have a recovery path the next time they launch a
+            // fixed build.
+            let backup = fileURL.deletingPathExtension()
+                .appendingPathExtension("decode-failed.json")
+            try? FileManager.default.removeItem(at: backup)
+            try? FileManager.default.copyItem(at: fileURL, to: backup)
+            return nil
+        }
     }
 
     static func save(_ model: BoulderModel) {
+        // Safety net: if this launch couldn't decode the saved file,
+        // we don't trust ourselves to overwrite it — the in-memory
+        // model is the fallback-empty one and would wipe real data.
+        // Skip the write entirely and log loudly. The user can fix
+        // the schema and reload.
+        if loadFailedSinceLaunch && !model.pixels.isEmpty == false {
+            NSLog("Boulder: refusing to save — load failed earlier this launch, file preserved")
+            return
+        }
         do {
             let data = try JSONEncoder().encode(model)
             try data.write(to: fileURL, options: .atomic)
+            // First successful save with a real model — we've moved
+            // past whatever decode trouble we had.
+            if !model.pixels.isEmpty { loadFailedSinceLaunch = false }
             // Also write a copy to the shared App Group container so
             // the BoulderWidget extension can read the latest state.
             writeToAppGroup(data)

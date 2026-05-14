@@ -60,8 +60,8 @@ struct OnboardingView: View {
 
                 if let err = siwaError {
                     Text(err)
-                        .font(.caption)
-                        .foregroundStyle(Color(hex: 0xFF6B6B))
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.45))
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: 320)
                 }
@@ -162,7 +162,11 @@ struct OnboardingView: View {
             if nsErr.code == ASAuthorizationError.canceled.rawValue {
                 siwaError = nil
             } else {
-                siwaError = "Apple Sign-In unavailable on this build — use the name form below."
+                // Quiet, non-alarming copy. Most users hitting this
+                // are on the free ad-hoc build where Apple's runtime
+                // entitlement check fails. The fallback form is right
+                // below — no reason to make it look like an error.
+                siwaError = "Sign in with the form below to keep going."
             }
             return
         case .success(let auth):
