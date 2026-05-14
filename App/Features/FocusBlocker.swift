@@ -78,45 +78,48 @@ final class FocusBlocker: NSObject, UNUserNotificationCenterDelegate {
         // Never punish the user for activating Boulder itself.
         if bid == Bundle.main.bundleIdentifier { return }
 
+        // Block only during an active focus session. Outside a session
+        // the block list is dormant — the user can do whatever.
+        guard store.isFocusing else { return }
+
         let blocked = store.model.blockedApps
         guard let match = blocked.first(where: { $0.bundleIdentifier == bid }) else { return }
 
-        // HARD push-back. Apple won't grant indie apps the
-        // FamilyControls entitlement for true OS-level blocking,
-        // so we do the strongest non-destructive thing macOS allows:
-        //   1) Hide the blocked app immediately on EVERY activation
-        //      — no cooldown on the hide, so cmd-tabbing to it just
-        //      makes it vanish again
-        //   2) Hide it again ~0.2s later (defense against apps that
-        //      auto-restore themselves)
-        //   3) Bring Boulder forward
-        //   4) Show a fullscreen lockout overlay the user can't miss
-        //   5) Crumble + notify (cooldown only on the pixel cost so
-        //      we don't drain 3px/sec on a rapid-fire mash)
-        runningApp.hide()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak runningApp] in
-            runningApp?.hide()
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak runningApp] in
-            runningApp?.hide()
+        NSLog("Boulder: blocked app activated during session — \(match.displayName) (\(bid)); terminating")
+
+        // Real enforcement. `.hide()` is useless against true-fullscreen
+        // games (Geometry Dash, Steam titles) since they capture the
+        // display server. So we just close the app:
+        //   1) Send SIGTERM via `terminate()` — graceful, most apps
+        //      save state and exit cleanly
+        //   2) After 1.0s if it's still running, `forceTerminate()` —
+        //      hard kill for stubborn games
+        let didTerminate = runningApp.terminate()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak runningApp] in
+            guard let app = runningApp, !app.isTerminated else { return }
+            NSLog("Boulder: \(bid) survived terminate(); force-terminating")
+            app.forceTerminate()
         }
 
         NSApp.activate(ignoringOtherApps: true)
         NotificationCenter.default.post(name: .boulderShowPopover, object: nil)
-        FocusLockoutWindow.show(appName: match.displayName, pixelsLost: pixelsPerCrumble)
+        FocusLockoutWindow.show(appName: match.displayName, pixelsLost: 0)
 
+        // Rate-limit the toast notification — terminate is loud enough
+        // visually that we don't need to spam the notification center.
         let now = Date()
         guard now.timeIntervalSince(lastCrumbleAt) >= cooldown else { return }
         lastCrumbleAt = now
-        NSLog("Boulder: blocked app activated — \(match.displayName) (\(bid)); hiding + crumbling \(pixelsPerCrumble) px")
-        store.crumble(pixels: pixelsPerCrumble)
+        if !didTerminate {
+            NSLog("Boulder: terminate() returned false for \(bid) — relying on forceTerminate fallback")
+        }
         notifyCrumble(appName: match.displayName)
     }
 
     private func notifyCrumble(appName: String) {
         let content = UNMutableNotificationContent()
-        content.title = "Focus broken"
-        content.body = "Opening \(appName) chipped \(pixelsPerCrumble) pixels off Boulder."
+        content.title = "🪨 Blocked during focus"
+        content.body = "\(appName) was closed. Get back to your rock."
         content.sound = nil
         let req = UNNotificationRequest(
             identifier: "boulder.crumble.\(Int(Date().timeIntervalSince1970))",

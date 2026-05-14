@@ -38,7 +38,10 @@ enum FocusLockoutWindow {
                 backing: .buffered,
                 defer: false
             )
-            panel.level = .floating
+            // .screenSaver sits above true-fullscreen apps (games,
+            // Spaces). .floating gets covered. We use the highest
+            // sensible non-system level so the overlay always wins.
+            panel.level = .screenSaver
             panel.isOpaque = false
             panel.backgroundColor = .clear
             panel.hasShadow = true
@@ -91,7 +94,7 @@ private struct LockoutContentView: View {
                     .font(.system(size: 42, weight: .black))
                     .tracking(1.5)
                     .foregroundStyle(Color(hex: 0xFF6B6B))
-                Text("Tabbing to \(appName) cost \(pixelsLost) grains")
+                Text("\(appName) was closed.")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.88))
                 Text("Get back to your rock.")

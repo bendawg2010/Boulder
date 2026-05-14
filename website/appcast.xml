@@ -7,6 +7,23 @@
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <item>
+      <title>v1.5.3</title>
+      <pubDate>Thu, 14 May 2026 16:32:54 +0000</pubDate>
+      <sparkle:version>1.5.3</sparkle:version>
+      <sparkle:shortVersionString>1.5.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        Real app blocking now: blocked apps get <b>force-quit</b> on activation during a focus session (graceful terminate, then force-terminate if it survives). The lockout overlay sits at screenSaver level so it shows over fullscreen games. Block list is dormant outside of sessions. For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.5.3/Boulder.dmg"
+        sparkle:version="1.5.3"
+        sparkle:shortVersionString="1.5.3"
+        length="2239018"
+        type="application/octet-stream"
+        sparkle:edSignature="UH8LNsEfXDRd23bngEZ1nkUTKzHZMXuK3XCVY9ttz9JOJcQNkms8w/TxYAqTV4+ETawF4eAgs7dCRRoSW9clDg==" />
+    </item>
+    <item>
       <title>v1.5.2</title>
       <pubDate>Thu, 14 May 2026 16:26:47 +0000</pubDate>
       <sparkle:version>1.5.2</sparkle:version>
