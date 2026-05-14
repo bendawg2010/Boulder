@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Boulder</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="popover">
+      <header class="popover-header">
+        <div class="tier-block">
+          <div class="tier-name" id="tier-name">Pebble</div>
+          <div class="tier-sub" id="tier-sub">0 grains to Stone</div>
+        </div>
+        <div class="count" id="grain-count">0 grains</div>
+      </header>
+
+      <section class="canvas-wrap">
+        <canvas id="rock" width="356" height="200"></canvas>
+        <div class="empty-state" id="empty-state">
+          <div class="empty-emoji">🪨</div>
+          <div class="empty-title">Your Boulder is a pebble.</div>
+          <div class="empty-sub">Pick a tag, hit Focus, and start growing.</div>
+        </div>
+      </section>
+
+      <div class="action-row" id="action-row" hidden>
+        <button class="btn btn-claim" id="claim-btn">
+          <span class="btn-icon">✨</span>
+          <span id="claim-label">Claim 0 grains</span>
+        </button>
+        <button class="btn btn-share" id="share-btn">
+          <span class="btn-icon">↗</span>
+          <span>Share your rock</span>
+        </button>
+      </div>
+
+      <section class="focus-block">
+        <label class="field-label">What are you focusing on?</label>
+        <input id="blurb" type="text" placeholder='e.g. "Refactoring the boulder renderer"' />
+
+        <div class="duration-row" role="radiogroup" aria-label="Session duration">
+          <button class="chip" data-mins="15">15m</button>
+          <button class="chip" data-mins="25">25m</button>
+          <button class="chip" data-mins="45">45m</button>
+          <button class="chip" data-mins="60">1h</button>
+          <button class="chip chip-open active" data-mins="">Open</button>
+        </div>
+
+        <div class="timer-row">
+          <div class="timer" id="timer-text">00:00</div>
+          <button class="btn btn-focus" id="focus-btn">Focus</button>
+        </div>
+      </section>
+
+      <footer class="popover-footer">
+        <button class="foot-btn" id="settings-btn">⚙ Settings</button>
+        <button class="foot-btn foot-quit" id="quit-btn">Quit</button>
+      </footer>
+    </main>
+
+    <!-- Onboarding sheet — shown on first launch -->
+    <div class="modal" id="onboarding" hidden>
+      <div class="modal-card">
+        <div class="modal-emoji">🪨</div>
+        <h1 class="modal-title">Welcome to Boulder</h1>
+        <p class="modal-sub">A pet rock for your focus.</p>
+        <label class="field-label">Your first name</label>
+        <input id="onb-name" type="text" placeholder="Ben" />
+        <label class="field-label">Name your rock (optional)</label>
+        <input id="onb-rock" type="text" placeholder='"Granite"' />
+        <button class="btn btn-start" id="onb-start" disabled>Start growing</button>
+        <p class="modal-foot">You can change these anytime in Settings.</p>
+      </div>
+    </div>
+
+    <script type="module" src="main.ts"></script>
+  </body>
+</html>

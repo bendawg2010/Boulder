@@ -38,12 +38,19 @@ enum Persistence {
 
     /// Writes model JSON to the App Group shared container.
     /// Failures are non-fatal — the widget will simply show stale data.
+    /// Ad-hoc-signed builds don't actually have App Group entitlements
+    /// granted, so the container lookup returns nil. We log that once
+    /// and then go quiet — it's not a real error, just a no-op path.
+    private static var appGroupWarnedMissing = false
     private static func writeToAppGroup(_ data: Data) {
         let groupID = "group.com.benburnette.Boulder"
         guard let container = FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: groupID)
         else {
-            NSLog("Boulder: App Group container not available for id '\(groupID)'")
+            if !appGroupWarnedMissing {
+                NSLog("Boulder: App Group '\(groupID)' not provisioned for this build — widget will read in-app state only")
+                appGroupWarnedMissing = true
+            }
             return
         }
         let dest = container.appendingPathComponent("widget-state.json")

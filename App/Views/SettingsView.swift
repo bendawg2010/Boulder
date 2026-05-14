@@ -77,6 +77,27 @@ struct SettingsView: View {
                 LabeledContent("Mountains released", value: "\(store.model.range.count)")
                 LabeledContent("Sessions logged", value: "\(store.model.sessions.count)")
             }
+            Section("Cloud sync") {
+                Toggle("Sync rock across devices", isOn: Binding(
+                    get: { store.model.cloudSyncEnabled },
+                    set: { store.setCloudSyncEnabled($0) }
+                ))
+                if let syncID = store.model.syncID {
+                    LabeledContent("Sync ID") {
+                        Text(syncID.uuidString.prefix(8) + "…")
+                            .font(.callout.monospaced())
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                }
+                if store.model.appleUserID != nil {
+                    LabeledContent("Apple Sign-In", value: "Linked")
+                }
+                Text("Your rock uploads to Supabase keyed by sync_id. Anyone with your sync_id can read or overwrite the row — keep it private.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Section("Startup") {
                 Toggle("Launch Boulder at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, newValue in

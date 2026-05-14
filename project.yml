@@ -19,8 +19,8 @@ settings:
     # SOURCE OF TRUTH — release.sh seds this line, xcodegen
     # regenerates Info.plist with $(MARKETING_VERSION). Do NOT
     # let PlistBuddy touch Info.plist directly; xcodegen wipes it.
-    MARKETING_VERSION: "1.6.0"
-    CURRENT_PROJECT_VERSION: "19"
+    MARKETING_VERSION: "1.7.0"
+    CURRENT_PROJECT_VERSION: "21"
 
 packages:
   Sparkle:
@@ -81,6 +81,8 @@ targets:
       - path: App/Features/FocusSession.swift
       - path: App/Features/FocusType.swift
       - path: App/Features/BlockedApp.swift
+      - path: App/Features/BoulderSync.swift
+      - path: App/Features/BoulderConfig.swift
       - path: App/Helpers/Persistence.swift
     info:
       path: Widget/Info.plist

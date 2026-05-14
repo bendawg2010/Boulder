@@ -1,0 +1,14 @@
+{
+  "name": "boulder-windows",
+  "version": "0.1.0-beta",
+  "private": true,
+  "description": "Windows port of Boulder — pet rock for your focus",
+  "scripts": {
+    "dev": "cd src-tauri && cargo tauri dev",
+    "build": "cd src-tauri && cargo tauri build",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

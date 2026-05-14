@@ -152,6 +152,23 @@ struct BoulderModel: Codable {
     /// boulder doesn't retroactively rename your mountain range.
     var rockName: String? = nil
 
+    /// Apple Sign In user identifier — opaque, stable per (app, Apple
+    /// ID) pair. Nil if the user signed in via the manual name fallback
+    /// (no paid Apple Developer account on this build) or hasn't
+    /// completed onboarding yet.
+    var appleUserID: String? = nil
+
+    /// Cloud-sync row key in Supabase. Generated on first onboarding
+    /// completion and reused forever — losing this means losing the
+    /// link to the user's cloud copy. Persisted in state.json AND in
+    /// Keychain (BoulderSync.swift) as a backup.
+    var syncID: UUID? = nil
+
+    /// True when the user has opted into cloud sync. Defaults false;
+    /// flipped on by Sign in with Apple flow or the explicit Settings
+    /// toggle.
+    var cloudSyncEnabled: Bool = false
+
     var pixelCount: Int { pixels.count }
     var tier: SizeTier { SizeTier.from(pixelCount: pixelCount) }
 

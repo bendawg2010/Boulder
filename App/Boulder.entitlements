@@ -10,5 +10,15 @@
   <array>
     <string>group.com.benburnette.Boulder</string>
   </array>
+  <!-- Sign in with Apple. Honored at runtime only with a paid Apple
+       Developer ID; with ad-hoc signing the SIWA button degrades to
+       the manual name fallback. -->
+  <key>com.apple.developer.applesignin</key>
+  <array>
+    <string>Default</string>
+  </array>
+  <!-- Outbound HTTPS for Supabase cloud sync. -->
+  <key>com.apple.security.network.client</key>
+  <true/>
 </dict>
 </plist>

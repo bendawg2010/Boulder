@@ -28,7 +28,9 @@ struct PopoverContentView: View {
     @State private var inspector: PixelInspection? = nil
     @State private var showGiveUpConfirm: Bool = false
     @State private var focusFieldHovered: Bool = false
-    @State private var shareCopiedAt: Date? = nil
+    @State private var shareJustCopied: Bool = false
+    @State private var shareFailed: Bool = false
+    @State private var showOnboarding: Bool = false
     @FocusState private var descriptionFocused: Bool
 
     var body: some View {
@@ -78,12 +80,18 @@ struct PopoverContentView: View {
         } message: {
             Text("You committed to \(formatDuration(store.session(forID: store.currentSessionID)?.plannedDuration ?? 0)). Stopping now is fine — every grain you've earned is banked. You can claim them anytime.")
         }
-        .sheet(isPresented: Binding(
-            get: { store.model.userFirstName == nil },
-            set: { _ in }
-        )) {
+        .sheet(isPresented: $showOnboarding) {
             OnboardingView()
                 .environmentObject(store)
+        }
+        .onAppear {
+            // Drive sheet visibility from the model — but through a real
+            // @State Bool so dismiss() is reliable. SwiftUI sheets with
+            // computed Bindings sometimes don't dismiss cleanly.
+            showOnboarding = store.model.userFirstName == nil
+        }
+        .onChange(of: store.model.userFirstName) { _, newValue in
+            showOnboarding = newValue == nil
         }
     }
 
@@ -162,13 +170,12 @@ struct PopoverContentView: View {
     /// Always-on Share button. Compact icon-pill when sharing space
     /// with Claim; full pill when alone.
     private func shareRockButton(compact: Bool) -> some View {
-        let copied = shareJustCopied
-        return Button(action: shareRock) {
+        Button(action: shareRock) {
             HStack(spacing: 8) {
-                Image(systemName: copied ? "checkmark.circle.fill" : "square.and.arrow.up")
+                Image(systemName: shareIconName)
                     .font(.system(size: 13, weight: .heavy))
                 if !compact {
-                    Text(copied ? "Link copied!" : "Share your rock")
+                    Text(shareLabel)
                         .font(.system(size: 14, weight: .heavy))
                         .tracking(0.3)
                 }
@@ -178,31 +185,96 @@ struct PopoverContentView: View {
             .padding(.vertical, 12)
             .background(
                 LinearGradient(
-                    colors: [Color(hex: 0xFF6B6B), Color(hex: 0xC147FF)],
+                    colors: shareGradient,
                     startPoint: .leading, endPoint: .trailing
                 )
             )
             .clipShape(Capsule())
             .foregroundStyle(.white)
             .shadow(color: Color(hex: 0xC147FF).opacity(0.40), radius: 10, y: 2)
+            .contentShape(Capsule())   // ensure the full pill is clickable, not just the icon
         }
         .buttonStyle(.plain)
-        .help("Copy a shareable link to your rock")
+        .help(shareLabel)
+        .animation(.easeInOut(duration: 0.18), value: shareJustCopied)
+        .animation(.easeInOut(duration: 0.18), value: shareFailed)
     }
 
-    private var shareJustCopied: Bool {
-        guard let t = shareCopiedAt else { return false }
-        return Date().timeIntervalSince(t) < 2.0
+    private var shareIconName: String {
+        if shareJustCopied { return "checkmark.circle.fill" }
+        if shareFailed     { return "exclamationmark.triangle.fill" }
+        return "square.and.arrow.up"
+    }
+    private var shareLabel: String {
+        if shareJustCopied { return "Link copied!" }
+        if shareFailed     { return "Couldn't copy — try again" }
+        return "Share your rock"
+    }
+    private var shareGradient: [Color] {
+        if shareFailed { return [Color(hex: 0xFF6B6B), Color(hex: 0xFFD960)] }
+        return [Color(hex: 0xFF6B6B), Color(hex: 0xC147FF)]
     }
 
+    /// Copy a sharable link to the clipboard. Resilient to rare URL-
+    /// construction edge cases (huge payloads, weird names) — falls
+    /// back to a hand-built URL string if URLComponents bails. Uses
+    /// @State Bools (not a date-based computed property) so the
+    /// "Copied!" pill always animates reliably.
     private func shareRock() {
-        guard let url = BoulderShareEncoder.shareURL(for: store.model) else { return }
+        let urlString: String?
+        if let url = BoulderShareEncoder.shareURL(for: store.model) {
+            urlString = url.absoluteString
+        } else {
+            // Manual fallback. The payload chars are all URL-safe
+            // base64 ([-_A-Za-z0-9]) so we can splice them into the
+            // hash directly without further encoding.
+            let payload = BoulderShareEncoder.encode(
+                pixels: store.model.pixels,
+                tags: store.model.tags
+            )
+            var qs: [String] = []
+            if let n = store.model.userFirstName,
+               !n.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                let encoded = n.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? n
+                qs.append("by=\(encoded)")
+            }
+            if let r = store.model.rockName,
+               !r.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                let encoded = r.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? r
+                qs.append("name=\(encoded)")
+            }
+            let query = qs.isEmpty ? "" : "?" + qs.joined(separator: "&")
+            urlString = "\(BoulderShareEncoder.shareBase)\(query)#\(payload)"
+        }
+
+        guard let s = urlString else {
+            NSLog("Boulder: share failed — no URL string")
+            flashShareFailed()
+            return
+        }
+
         let pb = NSPasteboard.general
         pb.clearContents()
-        pb.setString(url.absoluteString, forType: .string)
-        shareCopiedAt = Date()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.1) {
-            shareCopiedAt = shareCopiedAt
+        let ok = pb.setString(s, forType: .string)
+        if !ok {
+            NSLog("Boulder: share failed — pasteboard setString returned false")
+            flashShareFailed()
+            return
+        }
+
+        shareJustCopied = true
+        shareFailed = false
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            shareJustCopied = false
+        }
+    }
+
+    private func flashShareFailed() {
+        shareFailed = true
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_400_000_000)
+            shareFailed = false
         }
     }
 

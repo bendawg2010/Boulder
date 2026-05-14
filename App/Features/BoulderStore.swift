@@ -95,6 +95,23 @@ final class BoulderStore: ObservableObject {
         }
         self.model = loaded
         self.selectedTagID = loaded.tags.first?.id ?? UUID()
+
+        // Cloud sync: pull the server copy in the background. If it's
+        // newer than our local startedAt, swap it in. This is the
+        // "open Boulder on a second Mac, get your same rock" story.
+        if loaded.cloudSyncEnabled, let syncID = loaded.syncID {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if let remote = await BoulderSync.shared.pull(syncID: syncID),
+                   remote.pixels.count >= self.model.pixels.count
+                {
+                    var merged = remote
+                    merged.syncID = syncID
+                    merged.cloudSyncEnabled = true
+                    self.model = merged
+                }
+            }
+        }
     }
 
     private static func reshape(_ old: [BoulderPixel]) -> [BoulderPixel] {
@@ -110,7 +127,14 @@ final class BoulderStore: ObservableObject {
         }
     }
 
-    func persist() { Persistence.save(model) }
+    func persist() {
+        Persistence.save(model)
+        // Fire-and-forget cloud sync (throttled inside BoulderSync to
+        // ~one push per 5s so a busy minute doesn't hammer the API).
+        if model.cloudSyncEnabled, model.syncID != nil {
+            BoulderSync.shared.schedulePush(model)
+        }
+    }
 
     // MARK: Tick
 
@@ -372,6 +396,29 @@ final class BoulderStore: ObservableObject {
         model.userFirstName = trimmedFirst
         let trimmedRock = rockName.trimmingCharacters(in: .whitespacesAndNewlines)
         model.rockName = trimmedRock.isEmpty ? nil : trimmedRock
+        // First onboarding completion always provisions a sync UUID so
+        // cloud sync can be flipped on later without a fresh setup.
+        if model.syncID == nil { model.syncID = UUID() }
+        persist()
+    }
+
+    /// Apple Sign-In completion. Saves the stable user identifier and
+    /// the name Apple returned (only present on first auth). Enables
+    /// cloud sync automatically — the whole point of signing in is the
+    /// cross-device story.
+    func completeAppleSignIn(userID: String, firstName: String?) {
+        model.appleUserID = userID
+        if let n = firstName?.trimmingCharacters(in: .whitespacesAndNewlines), !n.isEmpty {
+            model.userFirstName = n
+        }
+        if model.syncID == nil { model.syncID = UUID() }
+        model.cloudSyncEnabled = true
+        persist()
+    }
+
+    func setCloudSyncEnabled(_ enabled: Bool) {
+        model.cloudSyncEnabled = enabled
+        if enabled, model.syncID == nil { model.syncID = UUID() }
         persist()
     }
 

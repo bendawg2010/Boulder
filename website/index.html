@@ -38,6 +38,7 @@
     <a href="#how" data-spy="how">How</a>
     <a href="#features" data-spy="features">Features</a>
     <a href="#why" data-spy="why">Why</a>
+    <a href="#download" data-spy="download">Download</a>
     <a href="https://github.com/bendawg2010/Boulder" target="_blank" rel="noopener">GitHub</a>
   </nav>
 </header>
@@ -56,11 +57,17 @@
         every minute you focus. After a year, you&rsquo;ve built a small mountain.
       </p>
       <div class="hero-cta">
-        <a class="btn primary" href="https://github.com/bendawg2010/Boulder/releases/latest/download/Boulder.dmg" data-download-trigger>↓ Download for macOS</a>
-        <a class="btn ghost" href="#trailer">Watch the trailer</a>
+        <a class="btn primary" href="https://github.com/bendawg2010/Boulder/releases/latest/download/Boulder.dmg" data-download-trigger>
+          <span class="btn-platform">🍎</span>
+          <span>Download for macOS</span>
+        </a>
+        <a class="btn primary windows-beta" href="https://github.com/bendawg2010/Boulder/issues/new?title=Windows%20beta%20waitlist&body=Add%20me%20to%20the%20waitlist%20for%20the%20Windows%20build." target="_blank" rel="noopener">
+          <span class="btn-platform">🪟</span>
+          <span>Windows beta · waitlist</span>
+        </a>
       </div>
       <div class="hero-meta">
-        Free · MIT licensed · ad-hoc signed · macOS 14+
+        Free · MIT licensed · ad-hoc signed · macOS 14+ · Windows 10/11 (beta soon)
       </div>
     </div>
 
@@ -173,10 +180,23 @@
     </div>
   </section>
 
-  <section class="cta-block">
+  <section id="download" class="cta-block">
     <h2>Start your pebble.</h2>
     <p class="section-lede">It can&rsquo;t die. It just grows.</p>
-    <a class="btn primary big" href="https://github.com/bendawg2010/Boulder/releases/latest/download/Boulder.dmg" data-download-trigger>↓ Download Boulder</a>
+    <div class="dl-tiles">
+      <a class="dl-tile mac" href="https://github.com/bendawg2010/Boulder/releases/latest/download/Boulder.dmg" data-download-trigger>
+        <div class="dl-tile-platform">🍎 macOS</div>
+        <div class="dl-tile-title">Boulder.dmg</div>
+        <div class="dl-tile-sub">macOS 14 Sonoma or later · Apple Silicon &amp; Intel · Sparkle auto-update</div>
+        <div class="dl-tile-cta">Download free →</div>
+      </a>
+      <a class="dl-tile windows" href="https://github.com/bendawg2010/Boulder/issues/new?title=Windows%20beta%20waitlist&body=Add%20me%20to%20the%20waitlist%20for%20the%20Windows%20build." target="_blank" rel="noopener">
+        <div class="dl-tile-platform">🪟 Windows</div>
+        <div class="dl-tile-title">Coming soon · beta</div>
+        <div class="dl-tile-sub">Windows 10/11 · same rock, same vibe · powered by Tauri + the macOS engine</div>
+        <div class="dl-tile-cta">Join the waitlist →</div>
+      </a>
+    </div>
     <div class="cta-tip">
       <a href="https://cash.app/$Dryeetsolutions" target="_blank" rel="noopener" class="cashapp">💸 Tip $5 on Cash App</a>
       <a href="https://github.com/sponsors/bendawg2010" target="_blank" rel="noopener">Sponsor</a>

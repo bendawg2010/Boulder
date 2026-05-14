@@ -1,0 +1,61 @@
+{
+  "$schema": "https://schema.tauri.app/config/2.0.0",
+  "productName": "Boulder",
+  "version": "0.1.0",
+  "identifier": "com.benburnette.boulder",
+  "build": {
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "",
+    "devUrl": "../src/index.html",
+    "frontendDist": "../src"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Boulder",
+        "label": "main",
+        "width": 380,
+        "height": 680,
+        "minWidth": 380,
+        "minHeight": 480,
+        "resizable": true,
+        "decorations": true,
+        "transparent": false,
+        "fullscreen": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "visible": false
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/tray.png",
+      "iconAsTemplate": false,
+      "menuOnLeftClick": false,
+      "tooltip": "Boulder — pet rock for your focus"
+    },
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "category": "Productivity",
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "targets": ["msi", "nsis"],
+    "shortDescription": "A pet rock for your focus.",
+    "longDescription": "Boulder grows one pixel for every five minutes you focus. No streaks, no death mechanic — just a rock that builds over months and years.",
+    "windows": {
+      "wix": {
+        "language": ["en-US"]
+      }
+    }
+  },
+  "plugins": {
+    "store": {},
+    "notification": {},
+    "autostart": {}
+  }
+}

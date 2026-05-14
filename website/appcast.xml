@@ -7,6 +7,40 @@
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <item>
+      <title>v1.7.0</title>
+      <pubDate>Thu, 14 May 2026 20:07:01 +0000</pubDate>
+      <sparkle:version>1.7.0</sparkle:version>
+      <sparkle:shortVersionString>1.7.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        Sign in with Apple in onboarding (with manual fallback). Real cloud sync via Supabase — your rock follows you to any Mac you sign into. Share button rewritten so it works reliably (no more random misses). Mac + Windows download buttons on the website. Windows app scaffold landed in the repo (Tauri). Quit glitches fixed. For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.7.0/Boulder.dmg"
+        sparkle:version="1.7.0"
+        sparkle:shortVersionString="1.7.0"
+        length="2311244"
+        type="application/octet-stream"
+        sparkle:edSignature="9TAYCQdtRW/PyuN+BUOgxvremLI7lDji+3Bc1aZR0lXWAEtzsh6US8ECt66VoUulLMblnB/sDSSbhHF7TH0qCw==" />
+    </item>
+    <item>
+      <title>v1.7.0</title>
+      <pubDate>Thu, 14 May 2026 19:49:15 +0000</pubDate>
+      <sparkle:version>1.7.0</sparkle:version>
+      <sparkle:shortVersionString>1.7.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        Glitch fixes (popover now sized correctly + cleaner Quit). Windows beta waitlist on the website. Windows app scaffold landed in repo (Tauri + TypeScript). For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.7.0/Boulder.dmg"
+        sparkle:version="1.7.0"
+        sparkle:shortVersionString="1.7.0"
+        length="2277039"
+        type="application/octet-stream"
+        sparkle:edSignature="o9thaHGST5DGrNtjkRUjIEM6yV/AuPtYrnsmSCLVAhXV/d3W00YCaJG85c7hgIQCGV7WwXHOWWrCR8fI4qCmBA==" />
+    </item>
+    <item>
       <title>v1.6.0</title>
       <pubDate>Thu, 14 May 2026 17:18:20 +0000</pubDate>
       <sparkle:version>1.6.0</sparkle:version>

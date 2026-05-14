@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var tickCancellable: AnyCancellable?
     private var iconCancellable: AnyCancellable?
+    private var showPopoverObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -53,7 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // FocusBlocker can't reach the popover directly — listen for
         // its "show yourself" signal and pop the popover so the user
         // sees the crumble flash immediately.
-        NotificationCenter.default.addObserver(
+        showPopoverObserver = NotificationCenter.default.addObserver(
             forName: .boulderShowPopover,
             object: nil,
             queue: .main
@@ -65,6 +66,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        // Cancel all observers and timers BEFORE persistence so no
+        // late ticks fire during teardown.
+        tickCancellable?.cancel()
+        iconCancellable?.cancel()
+        if let popover, popover.isShown { popover.performClose(nil) }
+        if let obs = showPopoverObserver {
+            NotificationCenter.default.removeObserver(obs)
+            showPopoverObserver = nil
+        }
+        blocker = nil
+
         // If the user is mid-commitment when they quit, count it as
         // a give-up so they can't dodge the penalty by force-quitting.
         // Falls through to a normal persist for open-ended sessions.
@@ -154,7 +166,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func installPopover() {
         let pop = NSPopover()
         pop.behavior = .transient
-        pop.contentSize = NSSize(width: 380, height: 560)
+        // Match PopoverContentView's intrinsic .frame(width: 380, height: 680)
+        // exactly so the popover doesn't clip the footer.
+        pop.contentSize = NSSize(width: 380, height: 680)
         pop.contentViewController = NSHostingController(
             rootView: PopoverContentView()
                 .environmentObject(store)
@@ -216,7 +230,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func quit(_ sender: Any?) {
-        NSApp.terminate(sender)
+        // Close the popover FIRST so its hosted SwiftUI runloop tears
+        // down cleanly before terminate fires. Calling terminate while
+        // a popover is showing can leave a dangling hosting controller
+        // that delays shutdown.
+        if let popover, popover.isShown { popover.performClose(sender) }
+        DispatchQueue.main.async {
+            NSApp.terminate(sender)
+        }
     }
 }
 
