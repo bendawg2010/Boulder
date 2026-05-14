@@ -17,7 +17,10 @@
 import Foundation
 
 enum BoulderShareEncoder {
-    static let shareBaseURL = "https://boulder-43p.pages.dev/r/"
+    /// Hash-fragment form: payload after the `#` so the data never
+    /// hits server logs and we don't have to fight Cloudflare Pages'
+    /// .html-stripping path rewrites.
+    static let shareBaseURL = "https://boulder-43p.pages.dev/r/#"
 
     static func encode(pixels: [BoulderPixel], tags: [FocusTag]) -> String {
         var bytes: [UInt8] = []

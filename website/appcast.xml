@@ -7,6 +7,23 @@
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <item>
+      <title>v1.5.1</title>
+      <pubDate>Thu, 14 May 2026 15:45:57 +0000</pubDate>
+      <sparkle:version>1.5.1</sparkle:version>
+      <sparkle:shortVersionString>1.5.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        Share-rock URLs actually work now (use hash-fragment form instead of path so Cloudflare's .html-stripping doesn't break them). For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.5.1/Boulder.dmg"
+        sparkle:version="1.5.1"
+        sparkle:shortVersionString="1.5.1"
+        length="2236212"
+        type="application/octet-stream"
+        sparkle:edSignature="3y4ONZY4n0S133yQIpIRWUn+1w83HWTtKXMNBnAYtuPA0eeEBLpYWpAdjJ1XbTRPiekFMzSptLl1nfnuDTtgBw==" />
+    </item>
+    <item>
       <title>v1.5.0</title>
       <pubDate>Thu, 14 May 2026 15:41:06 +0000</pubDate>
       <sparkle:version>1.5.0</sparkle:version>
