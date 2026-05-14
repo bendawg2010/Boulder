@@ -117,6 +117,10 @@ struct RetiredBoulder: Codable, Identifiable, Hashable {
     /// alongside the pixels so the gallery can render historical
     /// Boulders correctly even after the user deletes tags later.
     var tagSnapshot: [FocusTag] = []
+    /// Optional name the user gave the boulder while it was alive.
+    /// Snapshotted on release so the mountain range card can display
+    /// it forever.
+    var name: String? = nil
 }
 
 struct BoulderModel: Codable {
@@ -136,6 +140,17 @@ struct BoulderModel: Codable {
     /// Each pixel references one of these by sessionID for the
     /// click-to-inspect feature.
     var sessions: [FocusSession] = []
+
+    /// First name the user entered during onboarding. Used in the
+    /// share page byline ("<rockName> by <userFirstName>"). Nil
+    /// until the first-launch sheet is completed; the presence of
+    /// this value also gates whether onboarding shows again.
+    var userFirstName: String? = nil
+
+    /// Optional name for the CURRENT (live) boulder. Snapshotted
+    /// into RetiredBoulder.name on release, so renaming the active
+    /// boulder doesn't retroactively rename your mountain range.
+    var rockName: String? = nil
 
     var pixelCount: Int { pixels.count }
     var tier: SizeTier { SizeTier.from(pixelCount: pixelCount) }

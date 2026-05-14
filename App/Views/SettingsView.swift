@@ -55,9 +55,25 @@ struct SettingsView: View {
 
     private var generalTab: some View {
         Form {
+            Section("You") {
+                LabeledContent("Your first name") {
+                    TextField("Your first name", text: Binding(
+                        get: { store.model.userFirstName ?? "" },
+                        set: { store.setIdentity(firstName: $0, rockName: store.model.rockName ?? "") }
+                    ))
+                    .multilineTextAlignment(.trailing)
+                }
+                LabeledContent("Rock name") {
+                    TextField("(optional)", text: Binding(
+                        get: { store.model.rockName ?? "" },
+                        set: { store.setRockName($0) }
+                    ))
+                    .multilineTextAlignment(.trailing)
+                }
+            }
             Section("Boulder") {
                 LabeledContent("Tier", value: store.model.tier.rawValue)
-                LabeledContent("Pixels", value: "\(store.model.pixelCount)")
+                LabeledContent("Grains", value: "\(store.model.pixelCount)")
                 LabeledContent("Mountains released", value: "\(store.model.range.count)")
                 LabeledContent("Sessions logged", value: "\(store.model.sessions.count)")
             }

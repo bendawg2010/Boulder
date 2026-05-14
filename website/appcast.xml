@@ -7,6 +7,23 @@
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <item>
+      <title>v1.6.0</title>
+      <pubDate>Thu, 14 May 2026 17:18:20 +0000</pubDate>
+      <sparkle:version>1.6.0</sparkle:version>
+      <sparkle:shortVersionString>1.6.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        First-launch onboarding asks for your name + (optional) rock name. Share URLs now include your byline. Share page shows '"<rockName>" — by <author>' and lets you <b>click any grain</b> to see when it was earned. For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.6.0/Boulder.dmg"
+        sparkle:version="1.6.0"
+        sparkle:shortVersionString="1.6.0"
+        length="2267250"
+        type="application/octet-stream"
+        sparkle:edSignature="uqN4jhGsObNmT8rligIpWnwkfoUvbnYcDwaLNhxLTx1vdwR25TiivfYuO2pj7rXxiqzfc2nkWYuYGaR9tLRRAg==" />
+    </item>
+    <item>
       <title>v1.5.3</title>
       <pubDate>Thu, 14 May 2026 16:32:54 +0000</pubDate>
       <sparkle:version>1.5.3</sparkle:version>

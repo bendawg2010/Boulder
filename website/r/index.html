@@ -17,21 +17,36 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 24px;
+        gap: 18px;
         padding: 48px 24px;
         text-align: center;
       }
       .share-canvas-wrap {
+        position: relative;
         background: radial-gradient(ellipse at center, rgba(255, 107, 107, 0.12), transparent 70%);
         padding: 24px;
         border-radius: 24px;
       }
       .share-canvas-wrap canvas { display: block; max-width: 100%; height: auto; }
       .share-meta {
-        font-size: 14px;
+        font-size: 12px;
         color: rgba(255, 255, 255, 0.5);
-        letter-spacing: 0.04em;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
+        font-weight: 700;
+      }
+      .share-title {
+        margin: 0;
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        line-height: 1.1;
+      }
+      .share-byline {
+        margin: 0;
+        max-width: 480px;
+        color: rgba(255, 255, 255, 0.62);
+        font-size: 15px;
       }
       .share-cta {
         display: inline-flex;
@@ -44,24 +59,46 @@
         font-weight: 700;
         text-decoration: none;
         font-size: 16px;
+        margin-top: 6px;
       }
-      .share-tag {
-        font-size: 13px;
-        color: rgba(255, 255, 255, 0.4);
+      .share-cta:hover { transform: translateY(-1px); transition: transform 0.15s ease-out; }
+      .share-foot {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.38);
+      }
+      .share-hint {
+        font-size: 12px;
+        color: rgba(255, 217, 96, 0.7);
+        letter-spacing: 0.03em;
+      }
+      .share-tooltip {
+        position: absolute;
+        pointer-events: none;
+        background: rgba(20, 12, 36, 0.96);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 217, 96, 0.4);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        opacity: 0;
+        transition: opacity 0.12s ease-out;
+        white-space: nowrap;
+        z-index: 10;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
       }
     </style>
   </head>
   <body class="share-page">
     <div class="share-meta" id="share-meta">Loading rock…</div>
+    <h1 class="share-title" id="share-title">Someone grew this rock.</h1>
+    <p class="share-byline" id="share-byline">One grain per five minutes of focus. No streaks. No death. Just a rock that grows.</p>
     <div class="share-canvas-wrap">
       <canvas id="share-canvas" width="600" height="420"></canvas>
+      <div class="share-tooltip" id="share-tooltip"></div>
     </div>
-    <h1 style="margin: 0; font-size: 28px;">Someone grew this rock.</h1>
-    <p style="margin: 0; max-width: 480px; color: rgba(255,255,255,0.65);">
-      One grain per five minutes of focus. No streaks. No death. Just a rock that grows.
-    </p>
+    <p class="share-hint">Hover or tap any grain to see when it was earned.</p>
     <a class="share-cta" href="/">Grow your own — Boulder is free</a>
-    <p class="share-tag">🪨 Made with Boulder · macOS menubar</p>
+    <p class="share-foot">🪨 Made with Boulder · macOS menubar</p>
 
     <script src="../share-renderer.js"></script>
   </body>

@@ -339,12 +339,15 @@ final class BoulderStore: ObservableObject {
             releasedAt: Date(),
             pixels: model.pixels,
             dominantType: dominant,
-            tagSnapshot: model.tags
+            tagSnapshot: model.tags,
+            name: model.rockName
         )
         var newModel = BoulderModel()
         newModel.range = model.range + [retired]
         newModel.tags = model.tags                  // user keeps their tag library
         newModel.blockedApps = model.blockedApps    // and their blocked-app list
+        newModel.userFirstName = model.userFirstName // identity persists across boulders
+        newModel.rockName = nil                      // new boulder, new name (or none)
         model = newModel
         isReleasing = false
         persist()
@@ -356,6 +359,26 @@ final class BoulderStore: ObservableObject {
             if let t = p.legacyType { counts[t, default: 0] += 1 }
         }
         return counts.max(by: { $0.value < $1.value })?.key
+    }
+
+    // MARK: Identity
+
+    /// Set on first launch from OnboardingView, and editable later in
+    /// Settings → General. An empty rockName clears the field (no
+    /// name), but firstName is required for sharing.
+    func setIdentity(firstName: String, rockName: String) {
+        let trimmedFirst = firstName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedFirst.isEmpty else { return }
+        model.userFirstName = trimmedFirst
+        let trimmedRock = rockName.trimmingCharacters(in: .whitespacesAndNewlines)
+        model.rockName = trimmedRock.isEmpty ? nil : trimmedRock
+        persist()
+    }
+
+    func setRockName(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        model.rockName = trimmed.isEmpty ? nil : trimmed
+        persist()
     }
 
     // MARK: Blocked apps

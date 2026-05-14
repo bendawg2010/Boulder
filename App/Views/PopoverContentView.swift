@@ -78,6 +78,13 @@ struct PopoverContentView: View {
         } message: {
             Text("You committed to \(formatDuration(store.session(forID: store.currentSessionID)?.plannedDuration ?? 0)). Stopping now is fine — every grain you've earned is banked. You can claim them anytime.")
         }
+        .sheet(isPresented: Binding(
+            get: { store.model.userFirstName == nil },
+            set: { _ in }
+        )) {
+            OnboardingView()
+                .environmentObject(store)
+        }
     }
 
     // MARK: Boulder stage
