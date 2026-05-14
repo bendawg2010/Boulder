@@ -7,6 +7,23 @@
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <item>
+      <title>v1.5.0</title>
+      <pubDate>Thu, 14 May 2026 15:41:06 +0000</pubDate>
+      <sparkle:version>1.5.0</sparkle:version>
+      <sparkle:shortVersionString>1.5.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        Pending grains now stay in escrow until you press <b>Claim N grains</b>. The pour-in animation got way slower and more rewarding — each grain lands with a yellow halo and overshoot scale. Pixels → grains everywhere. For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.5.0/Boulder.dmg"
+        sparkle:version="1.5.0"
+        sparkle:shortVersionString="1.5.0"
+        length="2236217"
+        type="application/octet-stream"
+        sparkle:edSignature="wehQtq8Xs34kMb/ALlt7rbPm/rQ7jTeEuxJAishGsMw0pPk824JgveHY98na1rEz3ea2D2MfzmIZ6H9bAT6gCQ==" />
+    </item>
+    <item>
       <title>v1.4.9</title>
       <pubDate>Thu, 14 May 2026 15:18:41 +0000</pubDate>
       <sparkle:version>1.4.9</sparkle:version>

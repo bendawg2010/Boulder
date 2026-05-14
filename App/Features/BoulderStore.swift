@@ -69,10 +69,13 @@ final class BoulderStore: ObservableObject {
         let startedAt: Date
         /// Seconds between each pixel's appearance.
         let stagger: TimeInterval
+        /// Per-pixel fade-in window — kept on the state so the renderer
+        /// matches whatever pacing the store chose.
+        let fadeIn: TimeInterval
         /// Total animation duration including the trailing pause.
         var totalDuration: TimeInterval {
-            // pixel-fade-in window (0.35s) + stagger * (count - 1) + 0.6s zoom-out tail
-            return 0.35 + stagger * Double(max(0, count - 1)) + 0.6
+            // fadeIn + stagger * (count - 1) + 1.2s celebratory tail
+            return fadeIn + stagger * Double(max(0, count - 1)) + 1.2
         }
     }
 
@@ -206,10 +209,11 @@ final class BoulderStore: ObservableObject {
 
     /// Normal stop — open-ended session, or a committed session that
     /// the user is allowed to end. Closes the record, no penalty.
-    /// FLUSHES pending pixels onto the rock with the pour-in animation.
+    /// Pending pixels stay in escrow; the user must press "Claim
+    /// grains" to fire the pour-in. That separation makes the reward
+    /// feel earned instead of automatic.
     func stopFocus() {
         isFocusing = false
-        flushPendingPixels()
         if let sid = currentSessionID,
            let idx = model.sessions.firstIndex(where: { $0.id == sid }) {
             model.sessions[idx].endedAt = Date()
@@ -223,28 +227,33 @@ final class BoulderStore: ObservableObject {
     }
 
     /// Mints all pendingPixelCount pixels onto the rock and triggers
-    /// the pour-in animation. Clears pendingPixelCount and sets
-    /// flushState so BoulderRenderer staggers the new pixels' fade-in.
-    /// Schedules a cleanup that nils flushState after the animation.
-    private func flushPendingPixels() {
+    /// the slow, luxurious pour-in animation. Clears pendingPixelCount
+    /// and sets flushState so BoulderRenderer staggers the new pixels'
+    /// fade-in. Schedules a cleanup that nils flushState after the
+    /// animation. Called from the "Claim N grains" button.
+    func claimGrains() {
         let count = pendingPixelCount
         pendingPixelCount = 0
         guard count > 0 else { return }
         let firstNewIndex = model.pixels.count
         for _ in 0..<count { emitPixel() }
-        // Slower stagger so each pixel is individually visible.
-        // Floor 0.06s so even big flushes feel punchy. Ceiling 0.18s
-        // so a small (~5 px) flush is luxurious. Cap total at ~5s
-        // for very large flushes (a 90m commitment can earn ~40-60).
-        let perPixel = 4.5 / Double(count)
-        let stagger = min(0.18, max(0.06, perPixel))
+        // Long, deliberate pacing — each grain should feel like a
+        // gem landing on the rock. Floor 0.14s so a tiny flush still
+        // unfolds; ceiling 0.32s so a 5-grain claim takes ~1.5s and a
+        // 50-grain claim takes ~12s. The user pressed a button to
+        // start this — they're watching, so reward them.
+        let perPixel = 9.0 / Double(count)
+        let stagger = min(0.32, max(0.14, perPixel))
+        let fadeIn: TimeInterval = 0.9
         let f = FlushState(
             firstNewIndex: firstNewIndex,
             count: count,
             startedAt: Date(),
-            stagger: stagger
+            stagger: stagger,
+            fadeIn: fadeIn
         )
         flushState = f
+        persist()
         let cleanup = f.totalDuration + 0.5
         DispatchQueue.main.asyncAfter(deadline: .now() + cleanup) { [weak self] in
             guard let self else { return }
@@ -274,21 +283,20 @@ final class BoulderStore: ObservableObject {
 
     /// User pressed "Give up" on a committed session. Marks the
     /// session as gave-up (for the inspector flag), then ends the
-    /// session normally — pending pixels POUR IN, no forfeiture,
-    /// no crumble. Boulder never loses pixels.
+    /// session normally. Pending grains remain in escrow — the user
+    /// still claims them manually. Boulder never loses pixels.
     func giveUpEarly() {
         guard let sid = currentSessionID else { stopFocus(); return }
         if let idx = model.sessions.firstIndex(where: { $0.id == sid }) {
             model.sessions[idx].gaveUp = true
         }
-        stopFocus()   // flushes pending pixels with the pour-in animation
+        stopFocus()
     }
 
     /// Committed session reached its planned duration. Adds the
-    /// bonus pixels to the pending escrow, then stops normally —
-    /// the bonus rides the same pour-in animation as the regular
-    /// pending pixels (so the user sees ONE big satisfying reveal,
-    /// not two animations stacked).
+    /// bonus pixels to the pending escrow, then stops the session.
+    /// The bonus stays in escrow with the regular grains; the user
+    /// presses "Claim N grains" to fire the pour-in.
     private func completeCommittedSession() {
         guard isFocusing else { return }
         let target = currentPlannedDuration ?? 0

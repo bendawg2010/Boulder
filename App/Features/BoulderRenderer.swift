@@ -93,11 +93,14 @@ struct BoulderRenderer: View {
 
                     for (i, p) in pixels.enumerated() {
                         // Pour-in animation: each new pixel pops in with
-                        // (a) a yellow halo glow that fades over 0.5s,
-                        // (b) an overshoot scale 0.0 → 1.4 → 1.0,
+                        // (a) a yellow halo glow that fades over ~0.9s,
+                        // (b) an overshoot scale 0.0 → 1.65 → 1.0,
                         // (c) an opacity ramp 0 → 1.
                         // Pixels staggered by f.stagger seconds so each
-                        // one is individually visible.
+                        // one is individually visible. The store sets
+                        // f.fadeIn so the renderer matches the chosen
+                        // pacing — long for manual claims, short for
+                        // anything that fires programmatically.
                         var opacity: Double = 1.0
                         var scale: CGFloat = 1.0
                         var glowAlpha: Double = 0.0
@@ -105,21 +108,21 @@ struct BoulderRenderer: View {
                             let offset = Double(i - f.firstNewIndex) * f.stagger
                             let elapsed = now.timeIntervalSince(f.startedAt) - offset
                             if elapsed < 0 { continue }   // not yet visible
-                            let fadeIn: Double = 0.55
-                            let halo:   Double = 0.50
+                            let fadeIn = max(0.2, f.fadeIn)
+                            let halo   = fadeIn * 1.05
                             if elapsed < fadeIn {
                                 let t = elapsed / fadeIn
                                 opacity = t
-                                // Overshoot: 0.0 → 1.45 by mid, settle to 1.0.
+                                // Overshoot: 0.0 → 1.65 by 60%, settle to 1.0.
                                 let s = t
-                                if s < 0.55 {
-                                    scale = 0.05 + (1.45 - 0.05) * (s / 0.55)
+                                if s < 0.60 {
+                                    scale = 0.05 + (1.65 - 0.05) * (s / 0.60)
                                 } else {
-                                    scale = 1.45 - (1.45 - 1.0) * ((s - 0.55) / 0.45)
+                                    scale = 1.65 - (1.65 - 1.0) * ((s - 0.60) / 0.40)
                                 }
                             }
                             if elapsed < halo {
-                                glowAlpha = 0.85 * (1.0 - elapsed / halo)
+                                glowAlpha = 0.95 * (1.0 - elapsed / halo)
                             }
                         }
 
@@ -133,22 +136,36 @@ struct BoulderRenderer: View {
                             scaledRect = rect
                         }
 
-                        // Halo glow — bright yellow soft square ~2.5× the
-                        // cell, layered BEHIND the pixel. Reads as a brief
-                        // "spark" as each pixel lands. Done before the
-                        // pixel fill so the pixel sits on top.
+                        // Halo glow — two layered soft circles behind the
+                        // pixel. The outer halo is broad+dim (atmospheric
+                        // bloom); the inner halo is tight+bright (the
+                        // landing flash itself). Reads as a small star
+                        // each grain leaves behind.
                         if glowAlpha > 0.01 {
-                            let glowSize = rect.width * 3.2
-                            let glowRect = CGRect(
-                                x: rect.midX - glowSize / 2,
-                                y: rect.midY - glowSize / 2,
-                                width: glowSize, height: glowSize
+                            let outerSize = rect.width * 5.2
+                            let outerRect = CGRect(
+                                x: rect.midX - outerSize / 2,
+                                y: rect.midY - outerSize / 2,
+                                width: outerSize, height: outerSize
                             )
-                            var glowCtx = ctx
-                            glowCtx.opacity = glowAlpha
-                            glowCtx.fill(
-                                Path(ellipseIn: glowRect),
-                                with: .color(Color(hex: 0xFFD960).opacity(0.55))
+                            var outerCtx = ctx
+                            outerCtx.opacity = glowAlpha * 0.55
+                            outerCtx.fill(
+                                Path(ellipseIn: outerRect),
+                                with: .color(Color(hex: 0xFFD960).opacity(0.35))
+                            )
+
+                            let innerSize = rect.width * 2.4
+                            let innerRect = CGRect(
+                                x: rect.midX - innerSize / 2,
+                                y: rect.midY - innerSize / 2,
+                                width: innerSize, height: innerSize
+                            )
+                            var innerCtx = ctx
+                            innerCtx.opacity = glowAlpha
+                            innerCtx.fill(
+                                Path(ellipseIn: innerRect),
+                                with: .color(Color(hex: 0xFFEFA8).opacity(0.85))
                             )
                         }
 

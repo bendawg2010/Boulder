@@ -95,7 +95,7 @@ struct CalendarHeatmapView: View {
         guard let b = bucket, b.minutes > 0 else { return "\(dateStr) · no focus" }
         let mins = Int(b.minutes.rounded())
         let tagName = b.dominantTag?.name ?? "—"
-        return "\(dateStr) · \(mins)m · \(b.pixelCount) px · \(tagName)"
+        return "\(dateStr) · \(mins)m · \(b.pixelCount) grains · \(tagName)"
     }
 
     // MARK: Month labels

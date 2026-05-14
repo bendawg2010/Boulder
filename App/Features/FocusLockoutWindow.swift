@@ -91,7 +91,7 @@ private struct LockoutContentView: View {
                     .font(.system(size: 42, weight: .black))
                     .tracking(1.5)
                     .foregroundStyle(Color(hex: 0xFF6B6B))
-                Text("Tabbing to \(appName) cost \(pixelsLost) px")
+                Text("Tabbing to \(appName) cost \(pixelsLost) grains")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.88))
                 Text("Get back to your rock.")

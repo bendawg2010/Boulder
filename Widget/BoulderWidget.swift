@@ -140,7 +140,7 @@ struct BoulderWidgetEntryView: View {
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            Text("\(entry.pixels.count) px")
+            Text("\(entry.pixels.count) grains")
                 .font(.caption)
                 .fontWeight(.bold)
                 .foregroundStyle(.white)

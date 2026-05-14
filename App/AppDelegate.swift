@@ -126,7 +126,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         button.image = img
         // Tooltip: human-readable status. Helps the user remember
         // there's a rock living in their menubar and what tier it is.
-        button.toolTip = "Boulder · \(store.model.tier.rawValue) · \(store.model.pixelCount) px"
+        button.toolTip = "Boulder · \(store.model.tier.rawValue) · \(store.model.pixelCount) grains"
     }
 
     @objc func togglePopover(_ sender: Any?) {

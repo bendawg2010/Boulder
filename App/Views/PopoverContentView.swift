@@ -68,13 +68,13 @@ struct PopoverContentView: View {
             TagEditorView(existing: editingTag)
                 .environmentObject(store)
         }
-        .alert("Give up early?", isPresented: $showGiveUpConfirm) {
+        .alert("Stop early?", isPresented: $showGiveUpConfirm) {
             Button("Keep going", role: .cancel) { }
-            Button("Give up (−\(store.giveUpPenalty) px)", role: .destructive) {
+            Button("Stop the session") {
                 store.giveUpEarly()
             }
         } message: {
-            Text("You committed to \(formatDuration(store.session(forID: store.currentSessionID)?.plannedDuration ?? 0)). Giving up now chips \(store.giveUpPenalty) pixels off Boulder.")
+            Text("You committed to \(formatDuration(store.session(forID: store.currentSessionID)?.plannedDuration ?? 0)). Stopping now is fine — every grain you've earned is banked. You can claim them anytime.")
         }
     }
 
@@ -88,11 +88,46 @@ struct PopoverContentView: View {
 
             canvas
 
+            if store.pendingPixelCount > 0 && !store.isFocusing && store.flushState == nil {
+                claimGrainsButton
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .transition(.scale(scale: 0.85).combined(with: .opacity))
+            }
+
             tierProgressBar
                 .padding(.horizontal, 16)
                 .padding(.top, 4)
                 .padding(.bottom, 12)
         }
+        .animation(.spring(response: 0.45, dampingFraction: 0.78), value: store.pendingPixelCount)
+        .animation(.spring(response: 0.45, dampingFraction: 0.78), value: store.flushState)
+    }
+
+    /// Big celebratory button — shows up after a session ends with
+    /// pending grains in escrow. Pressing it fires the slow pour-in.
+    private var claimGrainsButton: some View {
+        Button(action: { store.claimGrains() }) {
+            HStack(spacing: 10) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 14, weight: .heavy))
+                Text("Claim \(store.pendingPixelCount) grain\(store.pendingPixelCount == 1 ? "" : "s")")
+                    .font(.system(size: 14, weight: .heavy))
+                    .tracking(0.3)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(
+                LinearGradient(
+                    colors: [Color(hex: 0xFFD960), Color(hex: 0xFF6B6B), Color(hex: 0xC147FF)],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            )
+            .clipShape(Capsule())
+            .foregroundStyle(.black.opacity(0.85))
+            .shadow(color: Color(hex: 0xFFD960).opacity(0.45), radius: 12, y: 2)
+        }
+        .buttonStyle(.plain)
     }
 
     /// Tier name + momentum pill + pixel count. Designed as a three-band
@@ -119,7 +154,7 @@ struct PopoverContentView: View {
                 pendingBadge
                     .transition(.scale(scale: 0.7).combined(with: .opacity))
             }
-            Text("\(store.model.pixelCount) px")
+            Text("\(store.model.pixelCount) grains")
                 .font(.caption.monospacedDigit().weight(.medium))
                 .foregroundStyle(.white.opacity(0.55))
         }
@@ -132,7 +167,7 @@ struct PopoverContentView: View {
     /// rock until you stop — this is the user's only indication they're
     /// banking up. Pulses gently on each increment.
     private var pendingBadge: some View {
-        Text("+\(store.pendingPixelCount) px")
+        Text("+\(store.pendingPixelCount) banked")
             .font(.caption2.monospacedDigit().weight(.heavy))
             .foregroundStyle(Color(hex: 0xFFD960))
             .padding(.horizontal, 7)
@@ -150,7 +185,7 @@ struct PopoverContentView: View {
         let next = nextTierName
         let remaining = max(0, pixelsToNextTier)
         if remaining == 0 { return "Mountain reached — release when ready" }
-        return "\(remaining) px to \(next)"
+        return "\(remaining) grains to \(next)"
     }
 
     private var nextTierName: String {
@@ -242,7 +277,7 @@ struct PopoverContentView: View {
                 .offset(x: shake)
             }
             if crumblePop {
-                Text("−3 px")
+                Text("−3 grains")
                     .font(.headline.bold())
                     .foregroundStyle(Color(hex: 0xFF6B6B))
                     .shadow(color: Color(hex: 0xFF6B6B).opacity(0.6), radius: 8)

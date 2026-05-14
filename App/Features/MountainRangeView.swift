@@ -166,13 +166,13 @@ struct MountainRangeView: View {
         }
     }
 
-    /// "N px · M sessions" caption.
+    /// "N grains · M sessions" caption.
     private func metaLine(_ rb: RetiredBoulder) -> String {
         let px = rb.pixels.count
         let sessionIDs = Set(rb.pixels.compactMap { $0.sessionID })
         let count = sessionIDs.count
         let suffix = count == 1 ? "session" : "sessions"
-        return "\(px) px · \(count) \(suffix)"
+        return "\(px) grains · \(count) \(suffix)"
     }
 
     /// Dominant tag's chip color (for the card's border accent).
