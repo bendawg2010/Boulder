@@ -19,8 +19,8 @@ settings:
     # SOURCE OF TRUTH — release.sh seds this line, xcodegen
     # regenerates Info.plist with $(MARKETING_VERSION). Do NOT
     # let PlistBuddy touch Info.plist directly; xcodegen wipes it.
-    MARKETING_VERSION: "1.4.8"
-    CURRENT_PROJECT_VERSION: "13"
+    MARKETING_VERSION: "1.4.9"
+    CURRENT_PROJECT_VERSION: "14"
 
 packages:
   Sparkle:
@@ -67,3 +67,38 @@ targets:
         LD_RUNPATH_SEARCH_PATHS:
           - "@executable_path/../Frameworks"
         ENABLE_PREVIEWS: YES
+
+  BoulderWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Widget
+      - path: App/Features/BoulderRenderer.swift
+      - path: App/Features/BoulderShape.swift
+      - path: App/Features/BoulderState.swift
+      - path: App/Features/BoulderStore.swift
+      - path: App/Features/FocusTag.swift
+      - path: App/Features/FocusSession.swift
+      - path: App/Features/FocusType.swift
+      - path: App/Features/BlockedApp.swift
+      - path: App/Helpers/Persistence.swift
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: BoulderWidget
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.benburnette.Boulder.BoulderWidget
+        PRODUCT_NAME: BoulderWidget
+        CODE_SIGN_ENTITLEMENTS: Widget/BoulderWidget.entitlements
+        LD_RUNPATH_SEARCH_PATHS:
+          - "@executable_path/../../../../Frameworks"
+          - "@executable_path/../../../Frameworks"
+        SWIFT_VERSION: "5.9"
+        ENABLE_PREVIEWS: YES
+        SKIP_INSTALL: YES

@@ -23,7 +23,19 @@ xcodebuild \
   CODE_SIGN_IDENTITY="-" \
   CODE_SIGN_STYLE=Manual \
   CODE_SIGNING_REQUIRED=NO \
+  CODE_SIGNING_ALLOWED=NO \
   build 2>&1 | tail -25
+
+xcodebuild \
+  -project Boulder.xcodeproj \
+  -scheme BoulderWidget \
+  -configuration Release \
+  -derivedDataPath build \
+  CODE_SIGN_IDENTITY="-" \
+  CODE_SIGN_STYLE=Manual \
+  CODE_SIGNING_REQUIRED=NO \
+  CODE_SIGNING_ALLOWED=NO \
+  build 2>&1 | tail -10
 
 APP="$(find build -type d -name 'Boulder.app' -path '*Build/Products/Release/*' | head -1)"
 if [ -n "$APP" ]; then

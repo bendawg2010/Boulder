@@ -6,6 +6,23 @@
     <title>Boulder Updates</title>
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
+    <item>
+      <title>v1.4.9</title>
+      <pubDate>Thu, 14 May 2026 15:18:41 +0000</pubDate>
+      <sparkle:version>1.4.9</sparkle:version>
+      <sparkle:shortVersionString>1.4.9</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        Zero give-up penalty (your pending pixels always pour in, even if you stop early). New 'Share your rock' button copies a public link — anyone can view your rock in their browser. Brand-new WidgetKit widget: pin your boulder to Notification Center. Polished tag editor, cinematic release ceremony, parallax mountain range, more realistic boulder rendering everywhere.
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.4.9/Boulder.dmg"
+        sparkle:version="1.4.9"
+        sparkle:shortVersionString="1.4.9"
+        length="2227765"
+        type="application/octet-stream"
+        sparkle:edSignature="azI+/ukOYzRRElcXGaJ2WQoBWQkgLO9Szl5K/ByipTMjkhNXB/Kk3QKl5v+OmeVN2S55ziHsfzk02a84ecdoCw==" />
+    </item>
     <language>en</language>
     <item>
       <title>v1.4.8</title>

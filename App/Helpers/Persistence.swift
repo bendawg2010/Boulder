@@ -28,8 +28,29 @@ enum Persistence {
         do {
             let data = try JSONEncoder().encode(model)
             try data.write(to: fileURL, options: .atomic)
+            // Also write a copy to the shared App Group container so
+            // the BoulderWidget extension can read the latest state.
+            writeToAppGroup(data)
         } catch {
             NSLog("Boulder: failed to persist state: \(error)")
+        }
+    }
+
+    /// Writes model JSON to the App Group shared container.
+    /// Failures are non-fatal — the widget will simply show stale data.
+    private static func writeToAppGroup(_ data: Data) {
+        let groupID = "group.com.benburnette.Boulder"
+        guard let container = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: groupID)
+        else {
+            NSLog("Boulder: App Group container not available for id '\(groupID)'")
+            return
+        }
+        let dest = container.appendingPathComponent("widget-state.json")
+        do {
+            try data.write(to: dest, options: .atomic)
+        } catch {
+            NSLog("Boulder: failed to write widget-state to App Group: \(error)")
         }
     }
 }

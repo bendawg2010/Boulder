@@ -50,7 +50,58 @@ let SHADE_LEVELS = 20
 let ASPECT       = 1.30
 let MAX_CELLS    = 2000   // tuned for a chunky icon-scale boulder.
 
-func computeCells(maxN: Int) -> [Cell] {
+// =============================================================
+// Realism helpers — ported from BoulderShape.swift.
+// Hash math uses the UInt32-truncating pattern; bare Int &* with
+// big constants would trap.
+// =============================================================
+@inline(__always)
+func iconHash2(_ x: Int, _ y: Int, salt: UInt32 = 0) -> UInt32 {
+    let xu = UInt32(bitPattern: Int32(truncatingIfNeeded: x))
+    let yu = UInt32(bitPattern: Int32(truncatingIfNeeded: y))
+    var h = (xu &* UInt32(73856093)) ^ (yu &* UInt32(19349663))
+    h ^= salt &* UInt32(83492791)
+    h ^= h >> 13
+    h = h &* UInt32(2654435761)
+    h ^= h >> 16
+    return h
+}
+@inline(__always)
+func iconRand01(_ x: Int, _ y: Int, salt: UInt32 = 0) -> Double {
+    Double(iconHash2(x, y, salt: salt) % 10000) / 10000.0
+}
+@inline(__always)
+func iconValueNoise(_ x: Double, _ y: Double, salt: UInt32) -> Double {
+    let xi = Int(floor(x))
+    let yi = Int(floor(y))
+    let xf = x - Double(xi)
+    let yf = y - Double(yi)
+    let u = xf * xf * (3 - 2 * xf)
+    let v = yf * yf * (3 - 2 * yf)
+    let a = iconRand01(xi,     yi,     salt: salt)
+    let b = iconRand01(xi + 1, yi,     salt: salt)
+    let c = iconRand01(xi,     yi + 1, salt: salt)
+    let d = iconRand01(xi + 1, yi + 1, salt: salt)
+    let ab = a + (b - a) * u
+    let cd = c + (d - c) * u
+    return (ab + (cd - ab) * v) * 2.0 - 1.0
+}
+@inline(__always)
+func iconCrackField(_ x: Double, _ y: Double) -> Double {
+    let a = sin(x * 0.18 + y * 0.07 + 0.4)
+         +  cos(x * 0.05 - y * 0.13 + 1.7)
+    let b = sin(x * 0.09 - y * 0.21 + 2.3)
+         +  cos(x * 0.14 + y * 0.04 - 0.6)
+    return a * b
+}
+@inline(__always)
+func iconIsCrack(_ x: Int, _ y: Int) -> Bool {
+    let xd = Double(x) + iconValueNoise(Double(x) * 0.5, Double(y) * 0.5, salt: 77) * 0.4
+    let yd = Double(y) + iconValueNoise(Double(x) * 0.5, Double(y) * 0.5, salt: 78) * 0.4
+    return abs(iconCrackField(xd, yd)) < 0.10
+}
+
+func computeCells(maxN: Int) -> ([Cell], Set<Int>) {
     // Full ellipse area = π·A·B = π·ASPECT·B² ≥ maxN
     let B = ceil(sqrt(Double(maxN) / (.pi * ASPECT)))
     let A = ASPECT * B
@@ -102,30 +153,34 @@ func computeCells(maxN: Int) -> [Cell] {
         for x in -halfWidth...halfWidth {
             let xNorm = abs(Double(x)) / max(1.0, Double(halfWidth))
             // Vertical lighting factor: 0 at base, 1 at crown.
-            // Light comes from upper-left.
             let yLight = Double(y) / (2.0 * B)
-            //   base (yLight=0)  → ~shade 2   (deep base shadow)
-            //   mid  (yLight=0.5)→ ~shade 10  (body, half-lit)
-            //   crown(yLight=1)  → ~shade 19  (max highlight)
-            // Edge: drop up to ~4.5 shades for rounded silhouette.
-            // Right side: drop ~1.2 shades extra for upper-left light.
             var s = 2.0 + yLight * 17.0
             s -= xNorm * xNorm * 4.5
             if x > 0 {
                 let r = Double(x) / max(1.0, Double(halfWidth))
                 s -= r * 1.2
             }
-            // Deterministic hash noise for organic texture.
-            let xu = UInt32(bitPattern: Int32(truncatingIfNeeded: x))
-            let yu = UInt32(bitPattern: Int32(truncatingIfNeeded: y))
-            let h  = (xu &* 73856093) ^ (yu &* 19349663)
-            let n = (Double(h % 1000) / 1000.0 - 0.5) * 1.2
-            s += n
-            let shade = max(0, min(SHADE_LEVELS - 1, Int(s.rounded())))
+            // Multi-octave value noise — large lumps, medium grain, fine grit.
+            let nLarge = iconValueNoise(Double(x) * 0.10, Double(y) * 0.10, salt: 11) * 1.6
+            let nMed   = iconValueNoise(Double(x) * 0.33, Double(y) * 0.33, salt: 22) * 1.0
+            let nFine  = (iconRand01(x, y, salt: 33) - 0.5) * 1.2
+            s += nLarge + nMed + nFine
 
-            // Distance from the BOULDER'S CENTER (not its base) so
-            // partial slices accrete as a growing chunk, not a
-            // mountain rising from below.
+            // Upper-left highlight arc — top 25% + left 30% gets a boost.
+            let topness = max(0, (yLight - 0.65) / 0.35)
+            let leftness = max(0, (-Double(x) / max(1.0, Double(halfWidth)) - 0.10) / 0.55)
+            s += topness * leftness * 2.8
+
+            var shade = Int(s.rounded())
+
+            // Cracks — only away from silhouette edge.
+            let edgeDist = Double(halfWidth) - abs(Double(x))
+            if edgeDist >= 2.0 && iconIsCrack(x, y) {
+                shade -= 7
+            }
+            shade = max(0, min(SHADE_LEVELS - 1, shade))
+
+            // Distance from the BOULDER'S CENTER.
             let dx = Double(x)
             let dy = yc
             let dist = sqrt(dx * dx + dy * dy)
@@ -137,7 +192,26 @@ func computeCells(maxN: Int) -> [Cell] {
         if a.y != b.y { return a.y < b.y }
         return a.x < b.x
     }
-    return raw.prefix(maxN).map { Cell(x: $0.x, y: $0.y, shade: $0.shade) }
+    let cells = raw.prefix(maxN).map { Cell(x: $0.x, y: $0.y, shade: $0.shade) }
+
+    // Moss flagging — lower-left quadrant, value-noise clustered.
+    var maxY = 1
+    for c in cells { if c.y > maxY { maxY = c.y } }
+    let yLimit = Int(Double(maxY) * 0.55)
+    var moss: Set<Int> = []
+    for c in cells {
+        if c.x >= 0 || c.y >= yLimit { continue }
+        let n = iconValueNoise(Double(c.x) * 0.22, Double(c.y) * 0.22, salt: 91)
+        if n > 0.55 && iconRand01(c.x, c.y, salt: 92) > 0.35 {
+            moss.insert(((c.x + 1024) << 16) | (c.y + 1024))
+        }
+    }
+    return (cells, moss)
+}
+
+@inline(__always)
+func mossKey(_ x: Int, _ y: Int) -> Int {
+    return ((x + 1024) << 16) | (y + 1024)
 }
 
 // =============================================================
@@ -181,7 +255,12 @@ func veinAt(_ x: Int, _ y: Int) -> CGColor? {
 }
 
 // Precompute the maximum boulder once. We slice down per-size below.
-let ALL_CELLS = computeCells(maxN: MAX_CELLS)
+let _COMPUTED = computeCells(maxN: MAX_CELLS)
+let ALL_CELLS: [Cell] = _COMPUTED.0
+let MOSS_COORDS: Set<Int> = _COMPUTED.1
+// Olive-green moss ink — pre-blended target. Roughly hue 0.27,
+// sat 0.45, brightness 0.48 mixed at 0.70 with a body-tone granite.
+let MOSS_COLOR: CGColor = CGColor(srgbRed: 92.0/255, green: 113.0/255, blue: 80.0/255, alpha: 1)
 
 // =============================================================
 // Backdrop: vertical gradient + subtle magenta orb glow.
@@ -252,16 +331,57 @@ func drawBoulder(
     centerX: CGFloat,
     baselineY: CGFloat
 ) {
+    let cs = CGFloat(max(1, cellSize))
+    let halfCell = floor(cs / 2)
+    let n = min(pixelCount, ALL_CELLS.count)
+    let smallScale = cellSize <= 1   // gate moss at 1pt — too few cells.
+
+    // Cast shadow ellipse — painted BEFORE the boulder. Gated off for
+    // the absolute smallest icons (cellSize=1 AND tiny pixelCount)
+    // where it would dominate. Anti-alias ON for soft ellipse fill.
+    if n > 0 && pixelCount >= 200 {
+        var maxAbsX = 0
+        for i in 0..<n {
+            let ax = abs(ALL_CELLS[i].x)
+            if ax > maxAbsX { maxAbsX = ax }
+        }
+        let halfW = CGFloat(maxAbsX + 1) * cs
+        let shadowW = halfW * 2.0 * 1.10
+        let shadowH = max(cs * 1.4, cs * 2.2)
+        ctx.saveGState()
+        ctx.setShouldAntialias(true)
+        // CG origin is bottom-left; baselineY is the bottom of the rock.
+        // Center the shadow's vertical span around baselineY - small offset.
+        let shadowRect = CGRect(
+            x: centerX - shadowW / 2,
+            y: baselineY - shadowH * 0.70,
+            width: shadowW,
+            height: shadowH
+        )
+        ctx.setFillColor(CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.28))
+        ctx.addEllipse(in: shadowRect)
+        ctx.fillPath()
+        // Soft outer falloff.
+        let outerRect = shadowRect.insetBy(dx: -cs * 0.6, dy: -cs * 0.25)
+        ctx.setBlendMode(.multiply)
+        ctx.setFillColor(CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.10))
+        ctx.addEllipse(in: outerRect)
+        ctx.fillPath()
+        ctx.setBlendMode(.normal)
+        ctx.restoreGState()
+    }
+
     ctx.setShouldAntialias(false)
     ctx.interpolationQuality = .none
 
-    let n = min(pixelCount, ALL_CELLS.count)
-    let cs = CGFloat(max(1, cellSize))
-    let halfCell = floor(cs / 2)
-
     for i in 0..<n {
         let c = ALL_CELLS[i]
-        let color = veinAt(c.x, c.y) ?? GRANITE[c.shade]
+        let color: CGColor
+        if !smallScale && MOSS_COORDS.contains(mossKey(c.x, c.y)) {
+            color = MOSS_COLOR
+        } else {
+            color = veinAt(c.x, c.y) ?? GRANITE[c.shade]
+        }
         ctx.setFillColor(color)
         let x = centerX + CGFloat(c.x) * cs - halfCell
         // y grows UP in our model; CG origin is bottom-left.

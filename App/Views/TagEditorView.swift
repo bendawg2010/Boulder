@@ -1,7 +1,7 @@
 // TagEditorView.swift
 //
 // Modal form for creating or editing a FocusTag. The user picks an
-// emoji, a name, a description, and slides a hue slider to recolor
+// emoji, a name, a description, and selects a rock preset to recolor
 // the tag's palette in real time. Used from the Settings → Tags
 // tab and from the popover's "+ tag" button.
 
@@ -18,6 +18,7 @@ struct TagEditorView: View {
     @State private var emoji: String
     @State private var blurb: String
     @State private var hue: Double
+    @State private var hoveredPreset: String? = nil
 
     init(existing: FocusTag? = nil) {
         self.existing = existing
@@ -33,31 +34,46 @@ struct TagEditorView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider()
+            Divider().overlay(Color.white.opacity(0.06))
             form
-            Divider()
+            Divider().overlay(Color.white.opacity(0.06))
             footer
         }
-        .frame(width: 420, height: 460)
+        .frame(width: 440, height: 520)
     }
 
+    /// Premium header: large emoji, name, and a smooth 20-cell
+    /// palette stripe that previews the rock's full tonal range.
     private var header: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             Text(emoji.isEmpty ? "🪨" : emoji)
-                .font(.system(size: 44))
-            HStack(spacing: 6) {
-                ForEach(0..<4, id: \.self) { i in
-                    RoundedRectangle(cornerRadius: 4)
+                .font(.system(size: 52))
+                .shadow(color: selectedPreset.swatch.opacity(0.5), radius: 14)
+                .animation(.easeOut(duration: 0.25), value: hue)
+
+            Text(name.isEmpty ? "Untitled tag" : name)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(.white.opacity(name.isEmpty ? 0.4 : 0.95))
+                .tracking(0.2)
+
+            // Palette stripe: 20 shades stitched into one continuous
+            // gradient bar, framed in a subtle capsule.
+            HStack(spacing: 0) {
+                ForEach(0..<previewPalette.count, id: \.self) { i in
+                    Rectangle()
                         .fill(previewPalette[i])
-                        .frame(width: 32, height: 16)
                 }
             }
-            Text(name.isEmpty ? "Untitled tag" : name)
-                .font(.headline)
-                .foregroundStyle(.white.opacity(name.isEmpty ? 0.4 : 0.9))
+            .frame(width: 220, height: 14)
+            .clipShape(Capsule())
+            .overlay(
+                Capsule().stroke(Color.white.opacity(0.10), lineWidth: 0.8)
+            )
+            .shadow(color: selectedPreset.swatch.opacity(0.35), radius: 8, y: 2)
+            .animation(.easeOut(duration: 0.25), value: hue)
         }
-        .padding(.top, 20)
-        .padding(.bottom, 16)
+        .padding(.top, 22)
+        .padding(.bottom, 18)
         .frame(maxWidth: .infinity)
     }
 
@@ -71,15 +87,19 @@ struct TagEditorView: View {
             }
             Section("What does this tag mean to you?") {
                 TextEditor(text: $blurb)
-                    .frame(height: 70)
+                    .frame(height: 60)
                     .font(.body)
             }
             Section {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 12) {
                     Text("Rock type")
-                        .font(.caption)
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                        .tracking(0.3)
+                    LazyVGrid(
+                        columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4),
+                        spacing: 12
+                    ) {
                         ForEach(FocusTag.rockPresets) { preset in
                             rockButton(preset)
                         }
@@ -92,12 +112,31 @@ struct TagEditorView: View {
     }
 
     private var footer: some View {
-        HStack {
+        HStack(spacing: 10) {
             if existing != nil {
-                Button("Delete", role: .destructive) {
+                Button(role: .destructive) {
                     if let id = existing?.id { store.deleteTag(id: id) }
                     dismiss()
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "trash.fill")
+                            .font(.system(size: 11, weight: .bold))
+                        Text("Delete")
+                            .font(.callout.weight(.semibold))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color(hex: 0xFF6B6B).opacity(0.18))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .stroke(Color(hex: 0xFF6B6B).opacity(0.55), lineWidth: 1)
+                            )
+                    )
+                    .foregroundStyle(Color(hex: 0xFF6B6B))
                 }
+                .buttonStyle(.plain)
             }
             Spacer()
             Button("Cancel") { dismiss() }
@@ -109,34 +148,58 @@ struct TagEditorView: View {
             .keyboardShortcut(.defaultAction)
             .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
-        .padding(12)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
     }
 
-    /// Swatch button for one of the rock presets. Tapping snaps the
-    /// tag's hue to this preset; we don't allow the user to dial in
-    /// arbitrary hues, so the palette stays rock-like by construction.
+    /// Delightful rock preset button: hover scale, soft glow, and a
+    /// brand-tinted ring when selected.
     private func rockButton(_ preset: RockPreset) -> some View {
         let isSelected = abs(hue - preset.hue) < 0.0001
+        let isHovered  = hoveredPreset == preset.name
         return Button {
-            withAnimation(.easeOut(duration: 0.15)) { hue = preset.hue }
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
+                hue = preset.hue
+            }
         } label: {
-            VStack(spacing: 4) {
+            VStack(spacing: 5) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
                         .fill(preset.swatch)
-                        .frame(height: 28)
+                        .frame(height: 32)
+                        .shadow(
+                            color: preset.swatch.opacity(isSelected ? 0.55 : 0),
+                            radius: isSelected ? 8 : 0,
+                            y: 1
+                        )
                     if isSelected {
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.white, lineWidth: 2)
-                            .frame(height: 28)
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .stroke(Color.white.opacity(0.95), lineWidth: 1.6)
+                            .frame(height: 32)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(preset.swatch.opacity(0.6), lineWidth: 2)
+                            .frame(height: 34)
+                            .blur(radius: 3)
                     }
                 }
                 Text(preset.name)
-                    .font(.caption2.weight(isSelected ? .bold : .regular))
+                    .font(.caption2.weight(isSelected ? .bold : .medium))
                     .foregroundStyle(isSelected ? .primary : .secondary)
             }
+            .scaleEffect(isHovered ? 1.06 : 1.0)
+            .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isHovered)
+            .animation(.spring(response: 0.32, dampingFraction: 0.78), value: isSelected)
         }
         .buttonStyle(.plain)
+        .onHover { hovering in
+            hoveredPreset = hovering ? preset.name : nil
+        }
+    }
+
+    private var selectedPreset: RockPreset {
+        FocusTag.rockPresets.min(by: {
+            abs($0.hue - hue) < abs($1.hue - hue)
+        }) ?? FocusTag.rockPresets[0]
     }
 
     private var previewPalette: [Color] {

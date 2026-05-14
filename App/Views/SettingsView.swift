@@ -238,6 +238,8 @@ struct SettingsView: View {
 
     // MARK: About
 
+    @State private var shareCopiedAt: Date? = nil
+
     private var aboutTab: some View {
         VStack(spacing: 14) {
             Text("🪨").font(.system(size: 64))
@@ -247,6 +249,28 @@ struct SettingsView: View {
             Text("Version \(appVersion)")
                 .font(.callout.monospaced())
                 .foregroundStyle(.secondary)
+
+            Button(action: shareRock) {
+                HStack(spacing: 8) {
+                    Image(systemName: shareJustCopied ? "checkmark.circle.fill" : "square.and.arrow.up")
+                    Text(shareJustCopied ? "Link copied!" : "Share your rock")
+                        .fontWeight(.semibold)
+                }
+                .padding(.horizontal, 16).padding(.vertical, 8)
+                .background(
+                    LinearGradient(
+                        colors: [Color(red: 1.0, green: 0.42, blue: 0.42),
+                                 Color(red: 0.76, green: 0.28, blue: 1.0)],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                )
+                .clipShape(Capsule())
+                .foregroundStyle(.white)
+            }
+            .buttonStyle(.plain)
+            .disabled(store.model.pixels.isEmpty)
+            .opacity(store.model.pixels.isEmpty ? 0.4 : 1)
+
             VStack(spacing: 8) {
                 Link("Source on GitHub", destination: URL(string: "https://github.com/bendawg2010/Boulder")!)
                 Link("Tip on Cash App ($5)", destination: URL(string: "https://cash.app/$Dryeetsolutions")!)
@@ -259,6 +283,23 @@ struct SettingsView: View {
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var shareJustCopied: Bool {
+        guard let t = shareCopiedAt else { return false }
+        return Date().timeIntervalSince(t) < 2.0
+    }
+
+    private func shareRock() {
+        guard let url = BoulderShareEncoder.shareURL(for: store.model) else { return }
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(url.absoluteString, forType: .string)
+        shareCopiedAt = Date()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.1) {
+            // Trigger a refresh by toggling a state read in `shareJustCopied`.
+            shareCopiedAt = shareCopiedAt
+        }
     }
 
     private var appVersion: String {

@@ -73,27 +73,7 @@ struct StatsView: View {
     }
 
     private func statTile(label: String, value: String, accent: Color) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.caption2.weight(.semibold).monospaced())
-                .foregroundStyle(accent.opacity(0.9))
-                .tracking(0.8)
-            Text(value)
-                .font(.system(size: 22, weight: .bold, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.95))
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.white.opacity(0.04))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(accent.opacity(0.25), lineWidth: 1)
-                )
-        )
+        StatTile(label: label, value: value, accent: accent)
     }
 
     // MARK: Heatmap section
@@ -128,31 +108,7 @@ struct StatsView: View {
     }
 
     private func tagBar(row: TagRow, maxMinutes: Double) -> some View {
-        let fraction = maxMinutes > 0 ? row.minutes / maxMinutes : 0
-        return HStack(spacing: 10) {
-            Text(row.tag.emoji)
-                .font(.system(size: 16))
-                .frame(width: 22)
-            Text(row.tag.name)
-                .font(.body)
-                .foregroundStyle(.white.opacity(0.9))
-                .frame(width: 90, alignment: .leading)
-                .lineLimit(1)
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.white.opacity(0.06))
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(row.tag.chipColor.opacity(0.85))
-                        .frame(width: max(2, geo.size.width * fraction))
-                }
-            }
-            .frame(height: 10)
-            Text(formatHM(minutes: row.minutes))
-                .font(.callout.monospaced())
-                .foregroundStyle(.white.opacity(0.85))
-                .frame(width: 70, alignment: .trailing)
-        }
+        AnimatedTagBar(row: row, maxMinutes: maxMinutes, format: formatHM)
     }
 
     // MARK: Section header
@@ -172,7 +128,7 @@ struct StatsView: View {
 
     // MARK: Data
 
-    private struct TagRow {
+    fileprivate struct TagRow {
         let tag: FocusTag
         let minutes: Double
     }
@@ -284,5 +240,109 @@ struct StatsView: View {
         let m = total % 60
         if h == 0 { return "\(m) m" }
         return "\(h) h \(m) m"
+    }
+}
+
+// MARK: - Stat tile (hover affordance + accent stripe)
+
+private struct StatTile: View {
+    let label: String
+    let value: String
+    let accent: Color
+    @State private var hovered: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.caption2.weight(.semibold).monospaced())
+                .foregroundStyle(accent.opacity(0.9))
+                .tracking(0.8)
+            Text(value)
+                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                .monospacedDigit()
+                .foregroundStyle(.white.opacity(0.95))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.white.opacity(hovered ? 0.07 : 0.04))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(accent.opacity(hovered ? 0.5 : 0.25), lineWidth: 1)
+        )
+        // Brand-color accent stripe along the bottom edge.
+        .overlay(alignment: .bottom) {
+            UnevenRoundedRectangle(
+                topLeadingRadius: 0,
+                bottomLeadingRadius: 10,
+                bottomTrailingRadius: 10,
+                topTrailingRadius: 0
+            )
+            .fill(
+                LinearGradient(
+                    colors: [accent.opacity(0.4), accent],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            )
+            .frame(height: 2.5)
+        }
+        .shadow(color: accent.opacity(hovered ? 0.22 : 0), radius: 10, y: 3)
+        .animation(.easeOut(duration: 0.2), value: hovered)
+        .onHover { hovered = $0 }
+    }
+}
+
+// MARK: - Animated tag bar (left-to-right reveal on first appearance)
+
+private struct AnimatedTagBar: View {
+    let row: StatsView.TagRow
+    let maxMinutes: Double
+    let format: (Double) -> String
+    @State private var animatedFraction: Double = 0
+
+    var body: some View {
+        let fraction = maxMinutes > 0 ? row.minutes / maxMinutes : 0
+        return HStack(spacing: 10) {
+            Text(row.tag.emoji)
+                .font(.system(size: 16))
+                .frame(width: 22)
+            Text(row.tag.name)
+                .font(.body)
+                .foregroundStyle(.white.opacity(0.9))
+                .frame(width: 90, alignment: .leading)
+                .lineLimit(1)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.white.opacity(0.06))
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    row.tag.chipColor.opacity(0.65),
+                                    row.tag.chipColor.opacity(0.95)
+                                ],
+                                startPoint: .leading, endPoint: .trailing
+                            )
+                        )
+                        .frame(width: max(2, geo.size.width * animatedFraction))
+                }
+            }
+            .frame(height: 10)
+            Text(format(row.minutes))
+                .font(.callout.monospaced())
+                .monospacedDigit()
+                .foregroundStyle(.white.opacity(0.85))
+                .frame(width: 70, alignment: .trailing)
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.5).delay(0.05)) {
+                animatedFraction = fraction
+            }
+        }
     }
 }

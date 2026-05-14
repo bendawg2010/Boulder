@@ -266,38 +266,22 @@ final class BoulderStore: ObservableObject {
         max(0, Self.giveUpGracePeriod - sessionElapsed)
     }
 
-    /// Number of pixels a give-up costs RIGHT NOW. During the grace
-    /// window: 0. After: just the pending escrow (no floor crumble —
-    /// you only lose what you would have earned, never what you
-    /// already had).
-    var giveUpPenalty: Int {
-        if isInGiveUpGrace { return 0 }
-        return pendingPixelCount
-    }
+    /// Give-up costs zero. The session ends, pending pixels still
+    /// pour in via stopFocus's flush. No punishment, ever. The "give
+    /// up" button is purely a graceful early-exit for committed
+    /// sessions, NOT a penalty mechanic.
+    var giveUpPenalty: Int { 0 }
 
-    /// User pressed "Give up" on a committed session before the
-    /// timer ran out. Forfeits the pending pixel escrow (no pour-in,
-    /// no animation — they're just GONE) and marks the session
-    /// abandoned. Inside the 2-minute grace period: pending stays
-    /// 0 anyway, so this is effectively free. No floor crumble —
-    /// Boulder never loses pixels it already had.
+    /// User pressed "Give up" on a committed session. Marks the
+    /// session as gave-up (for the inspector flag), then ends the
+    /// session normally — pending pixels POUR IN, no forfeiture,
+    /// no crumble. Boulder never loses pixels.
     func giveUpEarly() {
         guard let sid = currentSessionID else { stopFocus(); return }
         if let idx = model.sessions.firstIndex(where: { $0.id == sid }) {
             model.sessions[idx].gaveUp = true
         }
-        pendingPixelCount = 0     // forfeit escrow — never minted
-        // Skip flushPendingPixels (count is now 0). Just close session.
-        isFocusing = false
-        if let idx = model.sessions.firstIndex(where: { $0.id == sid }) {
-            model.sessions[idx].endedAt = Date()
-            let earned = model.pixels.filter { $0.sessionID == sid }.count
-            model.sessions[idx].pixelsGrown = earned
-        }
-        currentSessionID = nil
-        draftBlurb = ""
-        draftDuration = nil
-        persist()
+        stopFocus()   // flushes pending pixels with the pour-in animation
     }
 
     /// Committed session reached its planned duration. Adds the

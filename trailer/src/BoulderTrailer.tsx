@@ -77,7 +77,62 @@ const Backdrop: React.FC = () => {
 //
 // Cells are ordered by distance from center-bottom so a partial
 // (N < max) slice still forms a coherent rounded boulder.
-type ShapeCell = { x: number; y: number; shade: number };
+type ShapeCell = { x: number; y: number; shade: number; moss: boolean };
+
+// ============================================================
+// Realism helpers — ported from App/Features/BoulderShape.swift.
+// Hash uses Math.imul + >>> 0 to mimic Swift's UInt32-truncating
+// multiplication. NEVER use bare `*` for the large multipliers —
+// JS numbers overflow precision past 2^53 and the hash collapses
+// into visible diagonal banding.
+// ============================================================
+function hash2(x: number, y: number, salt: number = 0): number {
+  // Force to int32, multiply with imul (32-bit truncating), xor.
+  const xu = x | 0;
+  const yu = y | 0;
+  let h = (Math.imul(xu, 73856093) ^ Math.imul(yu, 19349663)) >>> 0;
+  h = (h ^ Math.imul(salt | 0, 83492791)) >>> 0;
+  // xorshift mix so adjacent (x,y) diverge well.
+  h = (h ^ (h >>> 13)) >>> 0;
+  h = Math.imul(h, 2654435761) >>> 0;
+  h = (h ^ (h >>> 16)) >>> 0;
+  return h;
+}
+function rand01(x: number, y: number, salt: number = 0): number {
+  return (hash2(x, y, salt) % 10000) / 10000;
+}
+function valueNoise(x: number, y: number, salt: number): number {
+  const xi = Math.floor(x);
+  const yi = Math.floor(y);
+  const xf = x - xi;
+  const yf = y - yi;
+  const u = xf * xf * (3 - 2 * xf);
+  const v = yf * yf * (3 - 2 * yf);
+  const a = rand01(xi,     yi,     salt);
+  const b = rand01(xi + 1, yi,     salt);
+  const c = rand01(xi,     yi + 1, salt);
+  const d = rand01(xi + 1, yi + 1, salt);
+  const ab = a + (b - a) * u;
+  const cd = c + (d - c) * u;
+  return (ab + (cd - ab) * v) * 2 - 1;
+}
+function crackField(x: number, y: number): number {
+  const a = Math.sin(x * 0.18 + y * 0.07 + 0.4)
+          + Math.cos(x * 0.05 - y * 0.13 + 1.7);
+  const b = Math.sin(x * 0.09 - y * 0.21 + 2.3)
+          + Math.cos(x * 0.14 + y * 0.04 - 0.6);
+  return a * b;
+}
+function isCrack(x: number, y: number): boolean {
+  const xd = x + valueNoise(x * 0.5, y * 0.5, 77) * 0.4;
+  const yd = y + valueNoise(x * 0.5, y * 0.5, 78) * 0.4;
+  return Math.abs(crackField(xd, yd)) < 0.10;
+}
+function isStreak(x: number, y: number): boolean {
+  const s1 = Math.sin(x * 0.42 + y * 0.03);
+  const s2 = Math.cos(x * 0.27 - y * 0.02 + 1.5);
+  return Math.abs(s1) > 0.94 || Math.abs(s2) > 0.95;
+}
 
 function precomputeCells(maxN: number = 5600, aspect: number = 1.55): ShapeCell[] {
   // Half-ellipse area = (π/2)·A·B = (π/2)·aspect·B² ≥ maxN
@@ -90,31 +145,69 @@ function precomputeCells(maxN: number = 5600, aspect: number = 1.55): ShapeCell[
   type Raw = { x: number; y: number; shade: number; dist: number };
   const raw: Raw[] = [];
 
-  // Deterministic noise from (x,y) — adds 1-2 levels of variation
-  // per cell so the lighting gradient isn't pixel-perfectly smooth,
-  // which would look fake. Real rock has texture.
-  function noise(x: number, y: number): number {
-    const h = ((x * 73856093) ^ (y * 19349663)) >>> 0;
-    return (h % 1000) / 1000;   // 0..1 deterministic
+  const Bmax = Math.floor(B);
+  // Pre-compute silhouette half-widths per row WITH wobble.
+  const rowHalfWidth: number[] = [];
+  for (let y = 0; y <= Bmax; y++) {
+    const yNorm = y / B;
+    const baseHalf = A * Math.sqrt(Math.max(0, 1 - yNorm * yNorm));
+    const wob = 1.0
+      + 0.045 * Math.sin(y * 0.85)
+      + 0.030 * Math.cos(y * 1.40 + 1.2)
+      + 0.022 * Math.sin(y * 2.30 + 0.7);
+    rowHalfWidth.push(Math.max(0, Math.floor(baseHalf * wob)));
+  }
+  function smoothedHalfWidth(y: number): number {
+    const y0 = Math.max(0, y - 2);
+    const y1 = Math.min(Bmax, y + 2);
+    let sum = 0, n = 0;
+    for (let yi = y0; yi <= y1; yi++) { sum += rowHalfWidth[yi]; n++; }
+    return Math.floor(sum / Math.max(1, n));
   }
 
-  for (let y = 0; y <= B; y++) {
+  for (let y = 0; y <= Bmax; y++) {
     const yNorm = y / B;
-    const halfWidth = Math.floor(A * Math.sqrt(Math.max(0, 1 - yNorm * yNorm)));
-    if (halfWidth < 0) continue;
+    const halfWidth = rowHalfWidth[y];
+    if (halfWidth <= 0) continue;
+    const smoothed = smoothedHalfWidth(y);
+    const dentDepth = Math.max(0, smoothed - halfWidth);
     for (let x = -halfWidth; x <= halfWidth; x++) {
       const xNorm = Math.abs(x) / Math.max(1, halfWidth);
-      // Smooth lighting: base → ~shade 4, crown → ~shade 17 (of 20).
-      // Edge darkening: outer cells drop 2-4 shades for round silhouette.
-      // Per-cell noise: ±1 shade for texture.
-      // Smooth lighting curve — base is shadow, crown is highlight.
-      // Edge darkening for a rounded silhouette. Noise is only ±1
-      // shade so adjacent cells stay visually CONNECTED (big shade
-      // jumps make a uniform surface look like speckled gravel).
+
+      // Layer 1: base lighting.
       let s = 4 + yNorm * 13;
-      s -= xNorm * xNorm * 3.5;
-      s += (noise(x, y) - 0.5) * 1.2;
-      const shade = Math.max(0, Math.min(GRANITE.length - 1, Math.round(s)));
+      // Layer 2: edge darkening + AO.
+      s -= xNorm * xNorm * 4.0;
+      if (x > 0) s -= (x / halfWidth) * 0.8;
+      if (dentDepth > 0) {
+        const edgeDist = halfWidth - Math.abs(x);
+        if (edgeDist < dentDepth + 1.5) {
+          const aoStrength = 1 - edgeDist / (dentDepth + 1.5);
+          s -= aoStrength * 3.0;
+        }
+      }
+      const edgeDist = halfWidth - Math.abs(x);
+      if (edgeDist < 1.5) s -= (1.5 - edgeDist) * 1.2;
+
+      // Layer 3: multi-octave value noise.
+      const nLarge = valueNoise(x * 0.10, y * 0.10, 11) * 1.6;
+      const nMed   = valueNoise(x * 0.33, y * 0.33, 22) * 1.0;
+      const nFine  = (rand01(x, y, 33) - 0.5) * 1.2;
+      s += nLarge + nMed + nFine;
+
+      // Layer 7: upper-left highlight arc.
+      const topness = Math.max(0, (yNorm - 0.70) / 0.30);
+      const leftness = Math.max(0, (-x / Math.max(1, halfWidth) - 0.10) / 0.55);
+      s += topness * leftness * 2.8;
+
+      let shade = Math.round(s);
+
+      // Layer 4: cracks (only away from silhouette edge).
+      if (edgeDist >= 2.0 && isCrack(x, y)) shade -= 7;
+      // Layer 5: weathering streaks.
+      if (yNorm < 0.78 && isStreak(x, y)) shade -= 2;
+
+      shade = Math.max(0, Math.min(GRANITE.length - 1, shade));
 
       const dx = x;
       const dy = y * yStretch;
@@ -127,11 +220,28 @@ function precomputeCells(maxN: number = 5600, aspect: number = 1.55): ShapeCell[
     if (a.y !== b.y) return a.y - b.y;
     return a.x - b.x;
   });
-  return raw.slice(0, maxN).map((r) => ({ x: r.x, y: r.y, shade: r.shade }));
+  const trimmed = raw.slice(0, maxN);
+  // Layer 6: moss flagging — lower-left quadrant, noise-clustered.
+  let maxY = 1;
+  for (const r of trimmed) if (r.y > maxY) maxY = r.y;
+  const yLimit = Math.floor(maxY * 0.55);
+  return trimmed.map((r) => {
+    let moss = false;
+    if (r.x < 0 && r.y < yLimit) {
+      const n = valueNoise(r.x * 0.22, r.y * 0.22, 91);
+      if (n > 0.55 && rand01(r.x, r.y, 92) > 0.35) moss = true;
+    }
+    return { x: r.x, y: r.y, shade: r.shade, moss };
+  });
 }
 
 // Module-level cache — computed once.
 const ALL_CELLS: ShapeCell[] = precomputeCells();
+
+// Moss tint — blend granite shade 7 with olive-green (matches
+// BoulderRenderer.tintMoss). Hue 0.27, sat 0.45, brightness 0.48
+// in HSB → roughly rgb(80, 122, 68). Mix at 0.70 toward target.
+const MOSS_INK = "#5C7150";
 
 // Deterministic vein assignment — same (x,y) always reads as the
 // same vein color, so it doesn't shimmer across frames.
@@ -177,10 +287,48 @@ const Boulder: React.FC<{
     const cs = Math.max(1, Math.round(cell));
     const halfCell = Math.floor(cs / 2);
 
+    // Cast shadow ellipse — painted BEFORE the boulder so the rock
+    // sits on top of it. Width tracks the actual silhouette extent.
+    if (cells.length > 0) {
+      let maxAbsX = 0;
+      for (const c of cells) {
+        const ax = Math.abs(c.x);
+        if (ax > maxAbsX) maxAbsX = ax;
+      }
+      const halfW = (maxAbsX + 1) * cs;
+      const shadowW = halfW * 2 * 1.10;
+      const shadowH = Math.max(cs * 1.4, cs * 2.2);
+      ctx.fillStyle = "rgba(0,0,0,0.28)";
+      ctx.beginPath();
+      ctx.ellipse(
+        cx, baselineY - shadowH * 0.30 + shadowH / 2,
+        shadowW / 2, shadowH / 2,
+        0, 0, Math.PI * 2
+      );
+      ctx.fill();
+      // Soft outer falloff via multiply blend.
+      ctx.globalCompositeOperation = "multiply";
+      ctx.fillStyle = "rgba(0,0,0,0.10)";
+      ctx.beginPath();
+      ctx.ellipse(
+        cx, baselineY - shadowH * 0.30 + shadowH / 2,
+        shadowW / 2 + cs * 0.6, shadowH / 2 + cs * 0.25,
+        0, 0, Math.PI * 2
+      );
+      ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+    }
+
     for (let i = 0; i < cells.length; i++) {
       const c = cells[i];
-      const vein = veinAt(c.x, c.y);
-      ctx.fillStyle = vein ?? GRANITE[c.shade];
+      let color: string;
+      if (c.moss) {
+        color = MOSS_INK;
+      } else {
+        const vein = veinAt(c.x, c.y);
+        color = vein ?? GRANITE[c.shade];
+      }
+      ctx.fillStyle = color;
       ctx.fillRect(
         cx + c.x * cs - halfCell,
         baselineY - c.y * cs - cs,
