@@ -7,6 +7,23 @@
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <item>
+      <title>v1.5.2</title>
+      <pubDate>Thu, 14 May 2026 16:26:47 +0000</pubDate>
+      <sparkle:version>1.5.2</sparkle:version>
+      <sparkle:shortVersionString>1.5.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        Share button is now front-and-center in the popover, right next to Claim Grains, always visible when you have a rock to share. For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.5.2/Boulder.dmg"
+        sparkle:version="1.5.2"
+        sparkle:shortVersionString="1.5.2"
+        length="2237219"
+        type="application/octet-stream"
+        sparkle:edSignature="tgvq/D0wFGKVtqZsLvCkVo39bEa+GnkxHCN2GMgOkVwhFB9zcW1Ql9Cm0FmTqpcfmR4OoA1AQ0O/BCKj6A6tCw==" />
+    </item>
+    <item>
       <title>v1.5.1</title>
       <pubDate>Thu, 14 May 2026 15:45:57 +0000</pubDate>
       <sparkle:version>1.5.1</sparkle:version>

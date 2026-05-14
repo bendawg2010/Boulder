@@ -14,6 +14,7 @@
 // On commitment completion: golden flash + auto-stop.
 
 import SwiftUI
+import AppKit
 
 struct PopoverContentView: View {
     @EnvironmentObject var store: BoulderStore
@@ -27,6 +28,7 @@ struct PopoverContentView: View {
     @State private var inspector: PixelInspection? = nil
     @State private var showGiveUpConfirm: Bool = false
     @State private var focusFieldHovered: Bool = false
+    @State private var shareCopiedAt: Date? = nil
     @FocusState private var descriptionFocused: Bool
 
     var body: some View {
@@ -88,11 +90,10 @@ struct PopoverContentView: View {
 
             canvas
 
-            if store.pendingPixelCount > 0 && !store.isFocusing && store.flushState == nil {
-                claimGrainsButton
+            if !store.model.pixels.isEmpty {
+                actionRow
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
-                    .transition(.scale(scale: 0.85).combined(with: .opacity))
             }
 
             tierProgressBar
@@ -102,6 +103,27 @@ struct PopoverContentView: View {
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.78), value: store.pendingPixelCount)
         .animation(.spring(response: 0.45, dampingFraction: 0.78), value: store.flushState)
+    }
+
+    private var claimVisible: Bool {
+        store.pendingPixelCount > 0 && !store.isFocusing && store.flushState == nil
+    }
+
+    /// Always-visible row directly under the rock canvas: Claim (left,
+    /// when pending) + Share (right, always). When there's nothing to
+    /// claim, Share stretches to fill the row.
+    private var actionRow: some View {
+        HStack(spacing: 10) {
+            if claimVisible {
+                claimGrainsButton
+                    .transition(.scale(scale: 0.85).combined(with: .opacity))
+            }
+            shareRockButton(compact: claimVisible)
+                .transition(.scale(scale: 0.92).combined(with: .opacity))
+        }
+        .animation(.spring(response: 0.45, dampingFraction: 0.78), value: store.pendingPixelCount)
+        .animation(.spring(response: 0.45, dampingFraction: 0.78), value: store.flushState)
+        .animation(.spring(response: 0.45, dampingFraction: 0.78), value: store.isFocusing)
     }
 
     /// Big celebratory button — shows up after a session ends with
@@ -128,6 +150,53 @@ struct PopoverContentView: View {
             .shadow(color: Color(hex: 0xFFD960).opacity(0.45), radius: 12, y: 2)
         }
         .buttonStyle(.plain)
+    }
+
+    /// Always-on Share button. Compact icon-pill when sharing space
+    /// with Claim; full pill when alone.
+    private func shareRockButton(compact: Bool) -> some View {
+        let copied = shareJustCopied
+        return Button(action: shareRock) {
+            HStack(spacing: 8) {
+                Image(systemName: copied ? "checkmark.circle.fill" : "square.and.arrow.up")
+                    .font(.system(size: 13, weight: .heavy))
+                if !compact {
+                    Text(copied ? "Link copied!" : "Share your rock")
+                        .font(.system(size: 14, weight: .heavy))
+                        .tracking(0.3)
+                }
+            }
+            .frame(maxWidth: compact ? nil : .infinity)
+            .padding(.horizontal, compact ? 14 : 16)
+            .padding(.vertical, 12)
+            .background(
+                LinearGradient(
+                    colors: [Color(hex: 0xFF6B6B), Color(hex: 0xC147FF)],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            )
+            .clipShape(Capsule())
+            .foregroundStyle(.white)
+            .shadow(color: Color(hex: 0xC147FF).opacity(0.40), radius: 10, y: 2)
+        }
+        .buttonStyle(.plain)
+        .help("Copy a shareable link to your rock")
+    }
+
+    private var shareJustCopied: Bool {
+        guard let t = shareCopiedAt else { return false }
+        return Date().timeIntervalSince(t) < 2.0
+    }
+
+    private func shareRock() {
+        guard let url = BoulderShareEncoder.shareURL(for: store.model) else { return }
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(url.absoluteString, forType: .string)
+        shareCopiedAt = Date()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.1) {
+            shareCopiedAt = shareCopiedAt
+        }
     }
 
     /// Tier name + momentum pill + pixel count. Designed as a three-band
