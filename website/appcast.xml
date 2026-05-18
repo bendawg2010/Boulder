@@ -7,6 +7,23 @@
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <item>
+      <title>v1.12.0</title>
+      <pubDate>Mon, 18 May 2026 14:47:02 +0000</pubDate>
+      <sparkle:version>1.12.0</sparkle:version>
+      <sparkle:shortVersionString>1.12.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <b>Critical fixes + Windows app.</b> Claim button no longer covered by Share. 7-second-grain bug fixed (accumulator now resets). Personal rock on /app/ is now clickable. One-time Community Rock prompt for existing users. Polished Windows Tauri build with Rust-side blocker. For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.12.0/Boulder.dmg"
+        sparkle:version="1.12.0"
+        sparkle:shortVersionString="1.12.0"
+        length="2431266"
+        type="application/octet-stream"
+        sparkle:edSignature="tVhXz7bOZum1i54vWVTwzM5GGYwU9Sb29ejQL3kFNwiT4gvgjM+gOtyj97BkHAS/gZs41TBZt7tNwtLitW7vDA==" />
+    </item>
+    <item>
       <title>v1.11.0</title>
       <pubDate>Mon, 18 May 2026 14:35:20 +0000</pubDate>
       <sparkle:version>1.11.0</sparkle:version>

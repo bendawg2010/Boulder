@@ -30,6 +30,7 @@ struct PopoverContentView: View {
     @State private var focusFieldHovered: Bool = false
     @State private var shareJustCopied: Bool = false
     @State private var shareFailed: Bool = false
+    @State private var showCommunityPrompt: Bool = false
     @State private var showOnboarding: Bool = false
     @FocusState private var descriptionFocused: Bool
 
@@ -86,7 +87,25 @@ struct PopoverContentView: View {
             // finishing onboarding, nudge the window forward.
             if store.model.userFirstName == nil {
                 appDelegate.showOnboarding()
+                return
             }
+            // One-time prompt for users who upgraded past the
+            // onboarding community toggle. Only show after they've
+            // finished onboarding (have a first name) and have not
+            // yet seen this prompt.
+            if !store.model.hasSeenCommunityPrompt && !store.model.contributeToCommunity {
+                showCommunityPrompt = true
+            }
+        }
+        .alert("Contribute to the Community Rock?", isPresented: $showCommunityPrompt) {
+            Button("Yes — contribute") {
+                store.setContributeToCommunity(true)
+            }
+            Button("Not now") {
+                store.markCommunityPromptSeen()
+            }
+        } message: {
+            Text("Boulder has a public Community Rock that grows with every focused minute from every opted-in user. If you turn this on, each grain you claim is mirrored there with your first name and what you were working on. You can flip it any time in Settings → Community rock.")
         }
     }
 
@@ -130,11 +149,14 @@ struct PopoverContentView: View {
     private var actionRow: some View {
         HStack(spacing: 10) {
             if claimVisible {
+                // Claim grain takes the whole row when there are pending
+                // grains. Share temporarily yields the slot — the user
+                // wants to land grains first, then share. Avoids the bug
+                // where the share pill visually overlapped Claim.
                 claimGrainsButton
                     .transition(.scale(scale: 0.85).combined(with: .opacity))
-            }
-            if !store.model.pixels.isEmpty {
-                shareRockButton(compact: claimVisible)
+            } else if !store.model.pixels.isEmpty {
+                shareRockButton(compact: false)
                     .transition(.scale(scale: 0.92).combined(with: .opacity))
             }
         }

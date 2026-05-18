@@ -165,7 +165,7 @@ struct BoulderModel: Codable {
         case schemaVersion, id, startedAt, pixels, pixelAccumulator,
              range, blockedApps, tags, sessions,
              userFirstName, rockName, appleUserID, syncID, cloudSyncEnabled,
-             contributeToCommunity, groups
+             contributeToCommunity, hasSeenCommunityPrompt, groups
     }
 
     init() {}
@@ -187,6 +187,7 @@ struct BoulderModel: Codable {
         self.syncID           = try? c.decodeIfPresent(UUID.self, forKey: .syncID)
         self.cloudSyncEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .cloudSyncEnabled)) ?? false
         self.contributeToCommunity = (try? c.decodeIfPresent(Bool.self, forKey: .contributeToCommunity)) ?? false
+        self.hasSeenCommunityPrompt = (try? c.decodeIfPresent(Bool.self, forKey: .hasSeenCommunityPrompt)) ?? false
         self.groups = (try? c.decodeIfPresent([GroupMembership].self, forKey: .groups)) ?? []
     }
 
@@ -207,6 +208,7 @@ struct BoulderModel: Codable {
         try c.encodeIfPresent(syncID, forKey: .syncID)
         try c.encode(cloudSyncEnabled, forKey: .cloudSyncEnabled)
         try c.encode(contributeToCommunity, forKey: .contributeToCommunity)
+        try c.encode(hasSeenCommunityPrompt, forKey: .hasSeenCommunityPrompt)
         try c.encode(groups, forKey: .groups)
     }
 
@@ -242,6 +244,11 @@ struct BoulderModel: Codable {
     /// to the global Community Rock at boulder-43p.pages.dev/community.
     /// Defaults false — explicit opt-in only.
     var contributeToCommunity: Bool = false
+
+    /// True after the user has been asked the community-rock question
+    /// (and made their choice either way). Used to surface a one-time
+    /// prompt to existing users who upgraded past the new onboarding.
+    var hasSeenCommunityPrompt: Bool = false
 
     /// Groups this user belongs to. On each claim we contribute the
     /// new grains to every group rock here in addition to the public

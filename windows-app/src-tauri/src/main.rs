@@ -1,49 +1,71 @@
-// Boulder for Windows — Tauri shell.
-//
-// Tray-first app. The main window stays hidden on launch; clicking
-// the tray icon toggles it. Closing the window via the X just hides
-// it, matching the Mac menubar-popover behavior. Quit is from the
-// tray menu only.
-//
-// Mirror of the macOS AppDelegate.swift structure: tray + window +
-// persistence-on-disk. Cloud sync lands when the v1.8 backend is up.
+// Boulder for Windows — Tauri shell hosting the same web-app frontend
+// served at boulder-43p.pages.dev/app/. Adds a Windows-specific
+// blocker (active-window monitor + TerminateProcess) since the web
+// has no way to block apps from inside the browser.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod blocker;
+
+use std::sync::{Arc, Mutex};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager, WindowEvent,
 };
 
+use blocker::{BlockedApp, BlockerState, SharedBlocker};
+
+// MARK: Tauri commands the frontend calls.
+
+#[tauri::command]
+fn set_blocked_apps(state: tauri::State<SharedBlocker>, apps: Vec<BlockedApp>) {
+    if let Ok(mut s) = state.lock() {
+        s.blocked_apps = apps;
+    }
+}
+
+#[tauri::command]
+fn set_focus_state(state: tauri::State<SharedBlocker>, focusing: bool) {
+    if let Ok(mut s) = state.lock() {
+        s.focusing = focusing;
+        if !focusing { s.pending = None; }
+    }
+}
+
+#[tauri::command]
+fn cancel_block(state: tauri::State<SharedBlocker>) {
+    blocker::cancel(&state);
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::Builder::new().build())
+        .manage::<SharedBlocker>(Arc::new(Mutex::new(BlockerState::default())))
+        .invoke_handler(tauri::generate_handler![
+            set_blocked_apps,
+            set_focus_state,
+            cancel_block,
+        ])
         .setup(|app| {
+            // Tray + menu.
             let show = MenuItem::with_id(app, "show", "Show Boulder", true, None::<&str>)?;
-            let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
+            let community = MenuItem::with_id(app, "community", "Community Rock…", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit Boulder", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show, &settings, &quit])?;
+            let menu = Menu::with_items(app, &[&show, &community, &quit])?;
 
             let _tray = TrayIconBuilder::with_id("boulder-tray")
                 .icon(app.default_window_icon().unwrap().clone())
                 .icon_as_template(false)
-                .tooltip("Boulder")
+                .tooltip("Boulder — pet rock for your focus")
                 .menu(&menu)
                 .menu_on_left_click(false)
-                .on_menu_event(move |app, event| match event.id.as_ref() {
+                .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => toggle_main_window(app),
-                    "settings" => {
-                        if let Some(w) = app.get_webview_window("main") {
-                            let _ = w.show();
-                            let _ = w.set_focus();
-                        }
-                        // Typed event — the TS frontend listens via
-                        // `listen('boulder://show-settings', ...)`. No
-                        // arbitrary code execution; payload is unit.
-                        let _ = app.emit("boulder://show-settings", ());
+                    "community" => {
+                        let _ = app.emit("boulder://open-community", ());
                     }
                     "quit" => app.exit(0),
                     _ => {}
@@ -59,11 +81,13 @@ fn main() {
                     }
                 })
                 .build(app)?;
+
+            // Kick off the blocker poll loop.
+            blocker::spawn_poller(app.handle().clone());
+
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Closing the window hides it instead of quitting — matches
-            // macOS menubar-popover behavior. Quit is tray-menu-only.
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let _ = window.hide();

@@ -275,6 +275,8 @@ function tagByID(id) {
   return model.tags.find((t) => t.id === id);
 }
 
+let rockRenderState = null; // cached rect positions for hit-test
+
 function renderRock() {
   const canvas = document.getElementById("rock");
   const wrap = canvas.parentElement;
@@ -293,6 +295,7 @@ function renderRock() {
 
   if (model.pixels.length === 0) {
     empty.hidden = false;
+    rockRenderState = null;
     return;
   }
   empty.hidden = true;
@@ -316,16 +319,92 @@ function renderRock() {
   ctx.ellipse(cx, baselineY - shadowH * 0.30 + shadowH / 2, shadowW / 2, shadowH / 2, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  for (const px of model.pixels) {
+  const rects = new Array(model.pixels.length);
+  for (let i = 0; i < model.pixels.length; i++) {
+    const px = model.pixels[i];
     const tag = px.tagID ? tagByID(px.tagID) : null;
     const pal = tagPalette(tag);
     const shade = Math.max(0, Math.min(pal.length - 1, px.shade));
+    const rx = cx + px.x * cs - halfCell;
+    const ry = baselineY - px.y * cs - cs;
+    rects[i] = { rx, ry, cs };
     ctx.fillStyle = pal[shade];
-    ctx.fillRect(cx + px.x * cs - halfCell, baselineY - px.y * cs - cs, cs, cs);
+    ctx.fillRect(rx, ry, cs, cs);
   }
 
   ctx.fillStyle = "rgba(255,255,255,0.15)";
   ctx.fillRect(20, baselineY, width - 40, 1);
+  rockRenderState = { rects };
+}
+
+function rockHitTest(clientX, clientY) {
+  if (!rockRenderState) return -1;
+  const canvas = document.getElementById("rock");
+  const rect = canvas.getBoundingClientRect();
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  const { rects } = rockRenderState;
+  for (let i = rects.length - 1; i >= 0; i--) {
+    const r = rects[i];
+    if (x >= r.rx && x < r.rx + r.cs && y >= r.ry && y < r.ry + r.cs) return i;
+  }
+  return -1;
+}
+
+function showRockTooltip(i, cx, cy) {
+  const tt = document.getElementById("rock-tooltip");
+  if (i < 0 || !model.pixels[i]) { tt.style.opacity = "0"; return; }
+  const p = model.pixels[i];
+  const tag = p.tagID ? tagByID(p.tagID) : null;
+  const session = p.sessionID ? model.sessions.find((s) => s.id === p.sessionID) : null;
+
+  tt.textContent = "";
+  const title = document.createElement("div");
+  title.className = "tt-title";
+  title.textContent = `Grain ${i + 1} of ${model.pixels.length}`;
+  tt.appendChild(title);
+  if (tag) {
+    const t = document.createElement("div");
+    t.className = "tt-tag";
+    t.textContent = `${tag.emoji} ${tag.name}`;
+    tt.appendChild(t);
+  }
+  if (session?.blurb) {
+    const b = document.createElement("div");
+    b.style.fontStyle = "italic";
+    b.style.color = "rgba(255,255,255,0.75)";
+    b.textContent = `"${session.blurb}"`;
+    tt.appendChild(b);
+  }
+  if (p.earnedAt) {
+    const w = document.createElement("div");
+    w.className = "tt-when";
+    w.textContent = new Date(p.earnedAt * 1000).toLocaleString(undefined, {
+      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    });
+    tt.appendChild(w);
+  }
+
+  const wrap = document.querySelector(".canvas-wrap").getBoundingClientRect();
+  const x = Math.min(cx - wrap.left + 12, wrap.width - tt.offsetWidth - 6);
+  const y = Math.min(cy - wrap.top + 12, wrap.height - tt.offsetHeight - 6);
+  tt.style.left = `${x}px`;
+  tt.style.top = `${y}px`;
+  tt.style.opacity = "1";
+}
+
+function bindRockInteraction() {
+  const canvas = document.getElementById("rock");
+  const tt = document.getElementById("rock-tooltip");
+  canvas.addEventListener("mousemove", (e) => {
+    const i = rockHitTest(e.clientX, e.clientY);
+    showRockTooltip(i, e.clientX, e.clientY);
+    canvas.style.cursor = i >= 0 ? "pointer" : "default";
+  });
+  canvas.addEventListener("mouseleave", () => { tt.style.opacity = "0"; });
+  canvas.addEventListener("click", (e) => {
+    showRockTooltip(rockHitTest(e.clientX, e.clientY), e.clientX, e.clientY);
+  });
 }
 
 // ---------------- Tier / HUD ----------------
@@ -422,6 +501,78 @@ let elapsed = 0;
 let selectedTagID = model.tags[0]?.id || null;
 let currentSessionID = null;
 
+// Tauri bridge — only present when running inside the Windows app.
+// On the web this is a no-op.
+const tauri = (typeof window !== "undefined" && window.__TAURI__) || null;
+async function tauriInvoke(cmd, args) {
+  if (!tauri) return;
+  try { return await tauri.core.invoke(cmd, args); } catch (e) { /* ignore */ }
+}
+if (tauri && tauri.event) {
+  tauri.event.listen("blocker:warn", (e) => {
+    const { app_name } = e.payload || {};
+    if (!app_name) return;
+    showBlockerWarning(app_name);
+  });
+  tauri.event.listen("blocker:terminated", (e) => {
+    const { app_name } = e.payload || {};
+    forfeitSession(`${app_name || "App"} was closed.`);
+  });
+}
+
+function showBlockerWarning(appName) {
+  let overlay = document.getElementById("blocker-warning");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "blocker-warning";
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:200";
+    document.body.appendChild(overlay);
+  }
+  overlay.textContent = "";
+  const card = document.createElement("div");
+  card.style.cssText = "background:#1a1230;border:1px solid #FFD960;border-radius:18px;padding:24px;text-align:center;max-width:360px";
+  const title = document.createElement("div");
+  title.style.cssText = "font-size:24px;font-weight:900;color:#FFD960;margin-bottom:6px";
+  title.textContent = "🪨 HEADS UP";
+  const sub = document.createElement("div");
+  sub.style.cssText = "font-size:15px;font-weight:600;color:rgba(255,255,255,0.9);margin-bottom:8px";
+  sub.textContent = `You opened ${appName}.`;
+  const counter = document.createElement("div");
+  counter.style.cssText = "font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:14px;font-variant-numeric:tabular-nums";
+  let remaining = 3;
+  counter.textContent = `Returning in ${remaining}…`;
+  const btn = document.createElement("button");
+  btn.textContent = "I'm back — keep focusing";
+  btn.style.cssText = "background:linear-gradient(90deg,#2ee6a0,#47a0ff);color:rgba(0,0,0,0.85);border:none;border-radius:999px;padding:10px 18px;font-weight:800;cursor:pointer";
+  btn.addEventListener("click", async () => {
+    await tauriInvoke("cancel_block");
+    overlay.remove();
+    clearInterval(timer);
+  });
+  const note = document.createElement("div");
+  note.style.cssText = "font-size:11px;color:rgba(255,255,255,0.45);margin-top:10px";
+  note.textContent = "If you don't, the app closes and you forfeit this session's banked grains.";
+  card.appendChild(title); card.appendChild(sub); card.appendChild(counter); card.appendChild(btn); card.appendChild(note);
+  overlay.appendChild(card);
+  const timer = setInterval(() => {
+    remaining -= 1;
+    counter.textContent = `Returning in ${remaining}…`;
+    if (remaining <= 0) { clearInterval(timer); overlay.remove(); }
+  }, 1000);
+}
+
+function forfeitSession(reason) {
+  pendingCount = 0;
+  if (isFocusing) stopFocus();
+  flashStatus(reason);
+}
+
+function pushBlockedAppsToTauri() {
+  if (!tauri) return;
+  const apps = (model.blockedApps || []).map((a) => ({ name: a.displayName || a.name || "App", path: a.path || "" }));
+  tauriInvoke("set_blocked_apps", { apps });
+}
+
 function startFocus() {
   if (isFocusing) {
     stopFocus();
@@ -430,6 +581,11 @@ function startFocus() {
   if (!selectedTagID) return;
   isFocusing = true;
   elapsed = 0;
+  if (tauri) { pushBlockedAppsToTauri(); tauriInvoke("set_focus_state", { focusing: true }); }
+  // Reset accumulator so every fresh session starts at 0 — otherwise
+  // leftover fractional progress could mint a grain in the first few
+  // seconds of the new session.
+  model.pixelAccumulator = 0;
   currentSessionID = crypto.randomUUID();
   model.sessions.push({
     id: currentSessionID,
@@ -445,6 +601,7 @@ function startFocus() {
 }
 function stopFocus() {
   isFocusing = false;
+  if (tauri) tauriInvoke("set_focus_state", { focusing: false });
   if (currentSessionID) {
     const s = model.sessions.find((x) => x.id === currentSessionID);
     if (s) s.endedAt = nowSec();
@@ -939,6 +1096,7 @@ bindOnboarding();
 bindSettings();
 bindFocusUI();
 bindTagEditor();
+bindRockInteraction();
 renderAll();
 updateTimer();
 

@@ -228,6 +228,12 @@ final class BoulderStore: ObservableObject {
         model.sessions.append(session)
         currentSessionID = session.id
         sessionElapsed = 0
+        // Reset accumulator so every fresh session starts at 0/300 of
+        // a grain. Without this, leftover fractional progress from a
+        // previous session could mint a grain after a few seconds of
+        // the new session — confusing users who expect "5 min per
+        // grain at 1.0×, always."
+        model.pixelAccumulator = 0
         isFocusing = true
     }
 
@@ -481,7 +487,16 @@ final class BoulderStore: ObservableObject {
 
     func setContributeToCommunity(_ enabled: Bool) {
         model.contributeToCommunity = enabled
+        model.hasSeenCommunityPrompt = true
         if enabled, model.syncID == nil { model.syncID = UUID() }
+        persist()
+    }
+
+    /// Called when the user dismisses the one-time community prompt
+    /// without flipping the toggle (left it off, or hit "Maybe later").
+    /// We still mark it seen so we don't nag.
+    func markCommunityPromptSeen() {
+        model.hasSeenCommunityPrompt = true
         persist()
     }
 
