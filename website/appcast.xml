@@ -7,6 +7,23 @@
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <item>
+      <title>v1.12.2</title>
+      <pubDate>Mon, 18 May 2026 15:40:01 +0000</pubDate>
+      <sparkle:version>1.12.2</sparkle:version>
+      <sparkle:shortVersionString>1.12.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        Re-tag to trigger Windows CI against the devUrl-removed tree. For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.12.2/Boulder.dmg"
+        sparkle:version="1.12.2"
+        sparkle:shortVersionString="1.12.2"
+        length="2431262"
+        type="application/octet-stream"
+        sparkle:edSignature="5/Y7LyM3VGzG0rZDrtogRcSXHpgSzQyPz7w3PipyQa35oTbbiPZEM0+LGvrk8S8MKNPm+Z6SDojHhtpW1y7EAw==" />
+    </item>
+    <item>
       <title>v1.12.1</title>
       <pubDate>Mon, 18 May 2026 14:56:06 +0000</pubDate>
       <sparkle:version>1.12.1</sparkle:version>
