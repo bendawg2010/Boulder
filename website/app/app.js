@@ -514,9 +514,15 @@ function maybeShowOnboarding() {
   document.getElementById("onboarding").hidden = !!model.userFirstName;
 }
 function bindOnboarding() {
+  const newForm = document.getElementById("onb-new-form");
+  const pairForm = document.getElementById("onb-pair-form");
   const nameInput = document.getElementById("onb-name");
   const rockInput = document.getElementById("onb-rock");
   const startBtn = document.getElementById("onb-start");
+  const syncInput = document.getElementById("onb-syncid");
+  const pairBtn = document.getElementById("onb-pair-go");
+  const pairError = document.getElementById("onb-pair-error");
+
   nameInput.addEventListener("input", () => {
     startBtn.disabled = nameInput.value.trim().length === 0;
   });
@@ -530,6 +536,57 @@ function bindOnboarding() {
     schedulePush();
     document.getElementById("onboarding").hidden = true;
     renderAll();
+  });
+
+  document.getElementById("onb-show-pair").addEventListener("click", () => {
+    newForm.hidden = true;
+    pairForm.hidden = false;
+    syncInput.focus();
+  });
+  document.getElementById("onb-show-new").addEventListener("click", () => {
+    pairForm.hidden = true;
+    newForm.hidden = false;
+    pairError.hidden = true;
+    nameInput.focus();
+  });
+
+  syncInput.addEventListener("input", () => {
+    pairError.hidden = true;
+    pairBtn.disabled = !isUUID(syncInput.value.trim());
+  });
+  pairBtn.addEventListener("click", async () => {
+    const id = syncInput.value.trim().toLowerCase();
+    if (!isUUID(id)) {
+      pairError.textContent = "That doesn't look like a sync ID.";
+      pairError.hidden = false;
+      return;
+    }
+    pairBtn.disabled = true;
+    pairBtn.textContent = "Pulling rock…";
+    try {
+      const url = `${SUPABASE_URL}/rest/v1/${TABLE}?sync_id=eq.${encodeURIComponent(id)}&select=payload&limit=1`;
+      const res = await fetch(url, {
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` },
+      });
+      const rows = await res.json();
+      if (!Array.isArray(rows) || rows.length === 0) {
+        pairError.textContent = "No rock found for that sync ID.";
+        pairError.hidden = false;
+        pairBtn.disabled = false;
+        pairBtn.textContent = "Pair this device";
+        return;
+      }
+      const remote = rows[0].payload;
+      model = { ...emptyModel(), ...remote, syncID: id, cloudSyncEnabled: true };
+      writeLocal(model);
+      document.getElementById("onboarding").hidden = true;
+      renderAll();
+    } catch (e) {
+      pairError.textContent = "Couldn't reach the server. Try again.";
+      pairError.hidden = false;
+      pairBtn.disabled = false;
+      pairBtn.textContent = "Pair this device";
+    }
   });
 }
 

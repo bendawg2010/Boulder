@@ -7,6 +7,23 @@
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <item>
+      <title>v1.8.1</title>
+      <pubDate>Mon, 18 May 2026 00:39:29 +0000</pubDate>
+      <sparkle:version>1.8.1</sparkle:version>
+      <sparkle:shortVersionString>1.8.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        Onboarding now asks 'Already have a rock on another device?' so pairing is front and center instead of buried in Settings. Both Mac app and web app. For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.8.1/Boulder.dmg"
+        sparkle:version="1.8.1"
+        sparkle:shortVersionString="1.8.1"
+        length="2362213"
+        type="application/octet-stream"
+        sparkle:edSignature="1SYAjqp1IAoWbSoiOZcf0abvNdEAEn+xtYihr+5dnhtANcdRLl1GrsqTWAeMfsXI12pmBESDSgTajK5HtqxEDg==" />
+    </item>
+    <item>
       <title>v1.8.0</title>
       <pubDate>Mon, 18 May 2026 00:35:09 +0000</pubDate>
       <sparkle:version>1.8.0</sparkle:version>

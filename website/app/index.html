@@ -75,7 +75,7 @@
 
     <!-- Onboarding -->
     <div class="modal" id="onboarding" hidden>
-      <div class="modal-card">
+      <div class="modal-card" id="onb-new-form">
         <div class="modal-emoji">🪨</div>
         <h1>Welcome to Boulder</h1>
         <p>A pet rock for your focus. Grow it from any device.</p>
@@ -84,7 +84,25 @@
         <label class="field-label">Name your rock <span class="muted">(optional)</span></label>
         <input id="onb-rock" type="text" placeholder='"Granite"' autocomplete="off" />
         <button class="btn btn-start" id="onb-start" disabled>Start growing</button>
-        <p class="onb-foot">Already have a rock on your Mac? Tap ⚙ → Pair to scan the QR code.</p>
+        <button class="onb-pair-link" id="onb-show-pair">
+          🔗 Already have a rock on another device?
+        </button>
+      </div>
+
+      <div class="modal-card" id="onb-pair-form" hidden>
+        <div class="modal-emoji">🔗</div>
+        <h1>Pair existing rock</h1>
+        <p>Paste your sync ID from the Mac app or your other browser.</p>
+        <label class="field-label">Sync ID</label>
+        <input id="onb-syncid" type="text" placeholder="12345678-90ab-cdef-1234-567890abcdef" autocomplete="off" autocapitalize="off" />
+        <p class="muted small onb-pair-help">
+          On your Mac: Settings → Cloud sync → copy Sync ID. Or scan the QR code from another browser.
+        </p>
+        <p class="onb-pair-error" id="onb-pair-error" hidden></p>
+        <button class="btn btn-pair" id="onb-pair-go" disabled>Pair this device</button>
+        <button class="onb-pair-link" id="onb-show-new">
+          Or start a new rock instead
+        </button>
       </div>
     </div>
 

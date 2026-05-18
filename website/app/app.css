@@ -270,6 +270,38 @@ input[type="text"]:focus { border-color: var(--magenta); background: rgba(255, 2
 }
 .onb-foot { margin-top: 14px; font-size: 11px; color: var(--ink-3); }
 
+.onb-pair-link {
+  margin-top: 14px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  padding: 8px 0;
+  cursor: pointer;
+}
+.onb-pair-link:hover { color: white; }
+.onb-pair-help { margin-top: 6px; }
+.onb-pair-error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--pink);
+  text-align: left;
+}
+.btn-pair {
+  margin-top: 14px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--mint), var(--blue), var(--magenta));
+  color: rgba(0, 0, 0, 0.85);
+  padding: 14px 0;
+  font-size: 15px;
+}
+.btn-pair:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink-3);
+  box-shadow: none;
+}
+
 .sheet-card { position: relative; }
 .sheet-card h2 { font-size: 20px; font-weight: 800; margin-bottom: 16px; }
 .sheet-card section { margin-bottom: 18px; }

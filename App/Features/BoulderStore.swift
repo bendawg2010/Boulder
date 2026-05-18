@@ -422,6 +422,18 @@ final class BoulderStore: ObservableObject {
         persist()
     }
 
+    /// Called from OnboardingView when the user pastes a sync ID from
+    /// another device. We replace the current empty model wholesale
+    /// (no merge — the user explicitly chose "pull from there") and
+    /// pin the same sync_id so future pushes write into that row.
+    func adoptPairedModel(_ remote: BoulderModel, syncID: UUID) {
+        var adopted = remote
+        adopted.syncID = syncID
+        adopted.cloudSyncEnabled = true
+        self.model = adopted
+        persist()
+    }
+
     func setRockName(_ name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         model.rockName = trimmed.isEmpty ? nil : trimmed
