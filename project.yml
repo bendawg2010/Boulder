@@ -19,8 +19,8 @@ settings:
     # SOURCE OF TRUTH — release.sh seds this line, xcodegen
     # regenerates Info.plist with $(MARKETING_VERSION). Do NOT
     # let PlistBuddy touch Info.plist directly; xcodegen wipes it.
-    MARKETING_VERSION: "1.12.0"
-    CURRENT_PROJECT_VERSION: "28"
+    MARKETING_VERSION: "1.12.1"
+    CURRENT_PROJECT_VERSION: "29"
 
 packages:
   Sparkle:
