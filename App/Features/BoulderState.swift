@@ -123,6 +123,16 @@ struct RetiredBoulder: Codable, Identifiable, Hashable {
     var name: String? = nil
 }
 
+/// A group rock the user has joined or created. The server-side row
+/// holds the actual grain data; we just track id+name+invite_code +
+/// the contribute toggle here for the client UI.
+struct GroupMembership: Codable, Identifiable, Hashable {
+    var id: String              // group UUID (server-generated)
+    var name: String
+    var inviteCode: String
+    var contributesGrains: Bool = true
+}
+
 struct BoulderModel: Codable {
     var schemaVersion: Int = 2
     var id: UUID = UUID()
@@ -155,7 +165,7 @@ struct BoulderModel: Codable {
         case schemaVersion, id, startedAt, pixels, pixelAccumulator,
              range, blockedApps, tags, sessions,
              userFirstName, rockName, appleUserID, syncID, cloudSyncEnabled,
-             contributeToCommunity
+             contributeToCommunity, groups
     }
 
     init() {}
@@ -177,6 +187,7 @@ struct BoulderModel: Codable {
         self.syncID           = try? c.decodeIfPresent(UUID.self, forKey: .syncID)
         self.cloudSyncEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .cloudSyncEnabled)) ?? false
         self.contributeToCommunity = (try? c.decodeIfPresent(Bool.self, forKey: .contributeToCommunity)) ?? false
+        self.groups = (try? c.decodeIfPresent([GroupMembership].self, forKey: .groups)) ?? []
     }
 
     func encode(to encoder: Encoder) throws {
@@ -196,6 +207,7 @@ struct BoulderModel: Codable {
         try c.encodeIfPresent(syncID, forKey: .syncID)
         try c.encode(cloudSyncEnabled, forKey: .cloudSyncEnabled)
         try c.encode(contributeToCommunity, forKey: .contributeToCommunity)
+        try c.encode(groups, forKey: .groups)
     }
 
     /// First name the user entered during onboarding. Used in the
@@ -230,6 +242,11 @@ struct BoulderModel: Codable {
     /// to the global Community Rock at boulder-43p.pages.dev/community.
     /// Defaults false — explicit opt-in only.
     var contributeToCommunity: Bool = false
+
+    /// Groups this user belongs to. On each claim we contribute the
+    /// new grains to every group rock here in addition to the public
+    /// community rock (if also opted in).
+    var groups: [GroupMembership] = []
 
     var pixelCount: Int { pixels.count }
     var tier: SizeTier { SizeTier.from(pixelCount: pixelCount) }

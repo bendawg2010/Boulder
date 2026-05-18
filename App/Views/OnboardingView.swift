@@ -20,6 +20,7 @@ struct OnboardingView: View {
 
     @State private var firstName: String = ""
     @State private var rockName: String = ""
+    @State private var contribute: Bool = false
     @State private var pairing: Bool = false
     @State private var pairSyncID: String = ""
     @State private var pairError: String? = nil
@@ -102,6 +103,22 @@ struct OnboardingView: View {
                 .buttonStyle(.plain)
                 .disabled(trimmedName.isEmpty)
                 .frame(maxWidth: 340)
+
+                Toggle(isOn: $contribute) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Contribute to the Community Rock")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.white.opacity(0.85))
+                        Text("Each grain you claim appears on boulder-43p.pages.dev/community. Others can see your first name + what you were doing. Off by default — change anytime in Settings.")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.42))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .toggleStyle(.switch)
+                .tint(Color(hex: 0xC147FF))
+                .frame(maxWidth: 340)
+                .padding(.top, 4)
 
                 Button {
                     pairing = true
@@ -252,7 +269,8 @@ struct OnboardingView: View {
         let name = trimmedName
         guard !name.isEmpty else { return }
         store.setIdentity(firstName: name, rockName: rockName.trimmingCharacters(in: .whitespacesAndNewlines))
-        store.setCloudSyncEnabled(true)   // auto-enable so sync just works
+        store.setCloudSyncEnabled(true)
+        store.setContributeToCommunity(contribute)
         onDismiss()
     }
 

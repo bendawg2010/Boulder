@@ -72,13 +72,13 @@ struct PopoverContentView: View {
             TagEditorView(existing: editingTag)
                 .environmentObject(store)
         }
-        .alert("Stop early?", isPresented: $showGiveUpConfirm) {
+        .alert("Give up?", isPresented: $showGiveUpConfirm) {
             Button("Keep going", role: .cancel) { }
-            Button("Stop the session") {
+            Button("Forfeit \(store.pendingPixelCount) grain\(store.pendingPixelCount == 1 ? "" : "s")", role: .destructive) {
                 store.giveUpEarly()
             }
         } message: {
-            Text("You committed to \(formatDuration(store.session(forID: store.currentSessionID)?.plannedDuration ?? 0)). Stopping now is fine — every grain you've earned is banked. You can claim them anytime.")
+            Text("You committed to \(formatDuration(store.session(forID: store.currentSessionID)?.plannedDuration ?? 0)). Giving up forfeits the \(store.pendingPixelCount) grain\(store.pendingPixelCount == 1 ? "" : "s") banked this session. Your rock keeps every grain you've already claimed.")
         }
         .onAppear {
             // Onboarding is its own NSWindow now (managed by
@@ -100,7 +100,12 @@ struct PopoverContentView: View {
 
             canvas
 
-            if !store.model.pixels.isEmpty {
+            // Action row shows whenever there's something to claim OR a
+            // rock to share. Previous gate was `!pixels.isEmpty` which
+            // hid the Claim button for first-time users who'd just
+            // finished their first session — 11 banked grains and no UI
+            // to claim them. Bug fix.
+            if !store.model.pixels.isEmpty || store.pendingPixelCount > 0 {
                 actionRow
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
@@ -128,8 +133,10 @@ struct PopoverContentView: View {
                 claimGrainsButton
                     .transition(.scale(scale: 0.85).combined(with: .opacity))
             }
-            shareRockButton(compact: claimVisible)
-                .transition(.scale(scale: 0.92).combined(with: .opacity))
+            if !store.model.pixels.isEmpty {
+                shareRockButton(compact: claimVisible)
+                    .transition(.scale(scale: 0.92).combined(with: .opacity))
+            }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.78), value: store.pendingPixelCount)
         .animation(.spring(response: 0.45, dampingFraction: 0.78), value: store.flushState)

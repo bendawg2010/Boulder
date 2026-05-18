@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Group rock — Boulder</title>
+    <meta name="description" content="A rock you grow with friends. Each grain is one focused minute." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E🪨%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../community/index.html" disabled />
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+        background: linear-gradient(180deg, #06010f, #1a1230);
+        color: white;
+        margin: 0;
+        min-height: 100vh;
+      }
+      .group-page {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 32px 18px;
+        max-width: 760px;
+        margin: 0 auto;
+        text-align: center;
+      }
+      .group-page h1 {
+        margin: 0;
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        background: linear-gradient(90deg, #ffd960, #ff6b6b, #c147ff);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .group-meta {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.5);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+      .group-canvas-wrap {
+        position: relative;
+        background: radial-gradient(ellipse at center, rgba(46, 230, 160, 0.12), transparent 70%);
+        padding: 24px;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .group-canvas-wrap canvas { display: block; max-width: 100%; height: auto; }
+      .group-tooltip {
+        position: absolute; pointer-events: none;
+        background: rgba(20, 12, 36, 0.96);
+        color: white;
+        padding: 10px 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(46, 230, 160, 0.4);
+        opacity: 0; transition: opacity 0.12s ease-out;
+        z-index: 10; max-width: 280px; text-align: left;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      }
+      .group-tooltip .row-title { font-size: 13px; font-weight: 800; margin-bottom: 4px; }
+      .group-tooltip .row-tag { font-size: 12px; font-weight: 600; color: rgba(46, 230, 160, 0.85); margin-bottom: 4px; }
+      .group-tooltip .row-blurb { font-size: 12px; color: rgba(255,255,255,0.75); font-style: italic; margin-bottom: 4px; }
+      .group-tooltip .row-when { font-size: 11px; color: rgba(255,255,255,0.5); font-family: ui-monospace, monospace; }
+      .invite-pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 14px;
+        background: rgba(255, 217, 96, 0.1);
+        border: 1px solid rgba(255, 217, 96, 0.4);
+        border-radius: 999px;
+        font-family: ui-monospace, monospace;
+        font-size: 16px; font-weight: 800;
+        letter-spacing: 0.1em;
+      }
+      .invite-copy {
+        background: transparent; border: none;
+        color: rgba(255, 217, 96, 0.9);
+        font-size: 12px; font-weight: 700;
+        cursor: pointer; padding: 4px 8px;
+        border-radius: 6px;
+      }
+      .invite-copy:hover { background: rgba(255, 217, 96, 0.15); }
+      .group-cta {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 12px 20px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #2ee6a0, #47a0ff);
+        color: rgba(0,0,0,0.85);
+        font-weight: 800; text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="group-page">
+      <div class="group-meta" id="group-meta">Loading…</div>
+      <h1 id="group-name">Group rock</h1>
+      <div>
+        Invite code:
+        <span class="invite-pill" id="invite-pill">—</span>
+        <button class="invite-copy" id="invite-copy">Copy link</button>
+      </div>
+      <p style="color:rgba(255,255,255,0.65);font-size:14px">
+        Share the code with friends. Anyone with Boulder can join from
+        Settings → Groups → Join with code.
+      </p>
+
+      <div class="group-canvas-wrap">
+        <canvas id="group-canvas" width="760" height="500"></canvas>
+        <div class="group-tooltip" id="group-tooltip"></div>
+      </div>
+      <p style="font-size:12px;color:rgba(46,230,160,0.7)">Hover or tap any grain.</p>
+      <a class="group-cta" href="/app/">Open your rock →</a>
+      <p style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:24px">🪨 boulder-43p.pages.dev</p>
+    </div>
+
+    <script src="./group.js"></script>
+  </body>
+</html>

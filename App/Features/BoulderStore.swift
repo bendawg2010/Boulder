@@ -265,8 +265,7 @@ final class BoulderStore: ObservableObject {
         // Community contribution — opt-in. Builds the grain records
         // straight from the freshly-emitted pixels so the public rock
         // mirrors what just landed on the user's personal rock.
-        if model.contributeToCommunity,
-           let syncID = model.syncID,
+        if let syncID = model.syncID,
            let firstName = model.userFirstName, !firstName.isEmpty
         {
             let newPixels = model.pixels[firstNewIndex...]
@@ -281,11 +280,21 @@ final class BoulderStore: ObservableObject {
                             (blurb?.isEmpty == false) ? blurb : nil,
                             p.earnedAt ?? Date())
                 }
-            BoulderSync.shared.contributeToCommunity(
-                syncID: syncID,
-                firstName: firstName,
-                grains: payload
-            )
+            if model.contributeToCommunity {
+                BoulderSync.shared.contributeToCommunity(
+                    syncID: syncID,
+                    firstName: firstName,
+                    grains: payload
+                )
+            }
+            for group in model.groups where group.contributesGrains {
+                BoulderSync.shared.contributeToGroup(
+                    groupID: group.id,
+                    syncID: syncID,
+                    firstName: firstName,
+                    grains: payload
+                )
+            }
         }
         // Long, deliberate pacing — each grain should feel like a
         // gem landing on the rock. Floor 0.14s so a tiny flush still
@@ -325,21 +334,43 @@ final class BoulderStore: ObservableObject {
         max(0, Self.giveUpGracePeriod - sessionElapsed)
     }
 
-    /// Give-up costs zero. The session ends, pending pixels still
-    /// pour in via stopFocus's flush. No punishment, ever. The "give
-    /// up" button is purely a graceful early-exit for committed
-    /// sessions, NOT a penalty mechanic.
-    var giveUpPenalty: Int { 0 }
+    /// Penalty for giving up early = forfeiting all grains banked
+    /// THIS SESSION. Boulder's already-committed pixels are never
+    /// touched — once a grain is claimed, it's safe forever. This is
+    /// the "lose the session, not the rock" semantic.
+    var giveUpPenalty: Int { pendingPixelCount }
 
     /// User pressed "Give up" on a committed session. Marks the
-    /// session as gave-up (for the inspector flag), then ends the
-    /// session normally. Pending grains remain in escrow — the user
-    /// still claims them manually. Boulder never loses pixels.
+    /// session as gave-up (for the inspector flag), forfeits all
+    /// banked-this-session grains, ends the session. The rock keeps
+    /// every grain you've previously claimed — only the in-flight
+    /// session's grains vanish.
     func giveUpEarly() {
-        guard let sid = currentSessionID else { stopFocus(); return }
+        guard let sid = currentSessionID else {
+            pendingPixelCount = 0
+            stopFocus()
+            return
+        }
         if let idx = model.sessions.firstIndex(where: { $0.id == sid }) {
             model.sessions[idx].gaveUp = true
         }
+        pendingPixelCount = 0   // forfeit
+        stopFocus()
+    }
+
+    /// Called by FocusBlocker when the 3-sec grace window expires
+    /// after the user activated a blocked app. Same semantic as
+    /// giveUpEarly: forfeit all banked-this-session grains, never
+    /// touch the claimed rock.
+    func forfeitSessionGrains() {
+        guard let sid = currentSessionID else {
+            pendingPixelCount = 0
+            return
+        }
+        if let idx = model.sessions.firstIndex(where: { $0.id == sid }) {
+            model.sessions[idx].gaveUp = true
+        }
+        pendingPixelCount = 0
         stopFocus()
     }
 
@@ -451,6 +482,41 @@ final class BoulderStore: ObservableObject {
     func setContributeToCommunity(_ enabled: Bool) {
         model.contributeToCommunity = enabled
         if enabled, model.syncID == nil { model.syncID = UUID() }
+        persist()
+    }
+
+    // MARK: Groups
+
+    func createGroup(name: String) async -> GroupMembership? {
+        if model.syncID == nil { model.syncID = UUID() }
+        let group = await BoulderSync.shared.createGroup(
+            syncID: model.syncID!, name: name
+        )
+        guard let group else { return nil }
+        if !model.groups.contains(where: { $0.id == group.id }) {
+            model.groups.append(group)
+        }
+        persist()
+        return group
+    }
+
+    func joinGroup(code: String) async -> GroupMembership? {
+        guard let group = await BoulderSync.shared.lookupGroup(code: code) else { return nil }
+        if !model.groups.contains(where: { $0.id == group.id }) {
+            model.groups.append(group)
+        }
+        persist()
+        return group
+    }
+
+    func leaveGroup(id: String) {
+        model.groups.removeAll { $0.id == id }
+        persist()
+    }
+
+    func setGroupContributes(id: String, contributes: Bool) {
+        guard let idx = model.groups.firstIndex(where: { $0.id == id }) else { return }
+        model.groups[idx].contributesGrains = contributes
         persist()
     }
 

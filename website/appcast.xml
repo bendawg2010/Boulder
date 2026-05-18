@@ -7,6 +7,23 @@
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <item>
+      <title>v1.11.0</title>
+      <pubDate>Mon, 18 May 2026 14:35:20 +0000</pubDate>
+      <sparkle:version>1.11.0</sparkle:version>
+      <sparkle:shortVersionString>1.11.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <b>Group rocks!</b> Grow a rock with friends — Settings → Groups → New group, share the 6-letter code. <b>Critical bug fix:</b> Claim button now actually shows after your first session (it was hidden for empty rocks). <b>Blocked apps:</b> 3-second 'I'm back' warning before the penalty. Give-up now forfeits this session's banked grains (rock is always safe). Community opt-in moved into onboarding. For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.11.0/Boulder.dmg"
+        sparkle:version="1.11.0"
+        sparkle:shortVersionString="1.11.0"
+        length="2424556"
+        type="application/octet-stream"
+        sparkle:edSignature="GLnUF7HxFREDkuf5ngzausatZZ478qclMMI+ifnKf3ZYxDW6lEQiqhGkFi/fDln3l/e5Ss5+pMOeXqRE6HVaAg==" />
+    </item>
+    <item>
       <title>v1.10.0</title>
       <pubDate>Mon, 18 May 2026 01:16:02 +0000</pubDate>
       <sparkle:version>1.10.0</sparkle:version>

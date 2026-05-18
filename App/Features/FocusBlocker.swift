@@ -21,6 +21,11 @@ extension Notification.Name {
     /// AppDelegate listens for this and pops the menubar popover so
     /// the user sees the crumble flash immediately.
     static let boulderShowPopover = Notification.Name("boulder.showPopover")
+
+    /// Posted by the warning lockout window when the user clicks
+    /// "I'm back" inside the 3-sec grace window. FocusBlocker
+    /// observes and cancels its pending termination.
+    static let boulderResumeFocus = Notification.Name("boulder.resumeFocus")
 }
 
 @MainActor
@@ -70,6 +75,10 @@ final class FocusBlocker: NSObject, UNUserNotificationCenterDelegate {
         if let observer { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
     }
 
+    private var pendingTerminationTask: Task<Void, Never>?
+    private var pendingApp: NSRunningApplication?
+    private var resumeObserver: NSObjectProtocol?
+
     private func handleActivation(_ note: Notification) {
         guard let store else { return }
         guard let runningApp = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
@@ -85,41 +94,100 @@ final class FocusBlocker: NSObject, UNUserNotificationCenterDelegate {
         let blocked = store.model.blockedApps
         guard let match = blocked.first(where: { $0.bundleIdentifier == bid }) else { return }
 
-        NSLog("Boulder: blocked app activated during session — \(match.displayName) (\(bid)); terminating")
+        // Already warning about THIS app? Don't double up.
+        if pendingApp?.bundleIdentifier == bid { return }
 
-        // Real enforcement. `.hide()` is useless against true-fullscreen
-        // games (Geometry Dash, Steam titles) since they capture the
-        // display server. So we just close the app:
-        //   1) Send SIGTERM via `terminate()` — graceful, most apps
-        //      save state and exit cleanly
-        //   2) After 1.0s if it's still running, `forceTerminate()` —
-        //      hard kill for stubborn games
-        let didTerminate = runningApp.terminate()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak runningApp] in
-            guard let app = runningApp, !app.isTerminated else { return }
-            NSLog("Boulder: \(bid) survived terminate(); force-terminating")
-            app.forceTerminate()
+        NSLog("Boulder: blocked app activated — \(match.displayName); 3-sec warning")
+
+        // Step 1: hide the blocked app immediately so the user can't
+        // continue using it during the countdown. .hide() works for
+        // most non-fullscreen apps; we follow with .hide() again at
+        // 0.2s as defense against apps that auto-restore.
+        runningApp.hide()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak runningApp] in
+            runningApp?.hide()
         }
 
+        // Step 2: bring Boulder forward and show the warning overlay
+        // with a 3-second countdown + "I'm back" button.
         NSApp.activate(ignoringOtherApps: true)
         NotificationCenter.default.post(name: .boulderShowPopover, object: nil)
-        FocusLockoutWindow.show(appName: match.displayName, pixelsLost: 0)
 
-        // Rate-limit the toast notification — terminate is loud enough
-        // visually that we don't need to spam the notification center.
+        pendingApp = runningApp
+        FocusLockoutWindow.showWarning(
+            appName: match.displayName,
+            seconds: 3
+        )
+
+        // Step 3: if the user clicks "I'm back" within 3 seconds, the
+        // panel posts .boulderResumeFocus. Cancel the pending termination.
+        if let obs = resumeObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
+        resumeObserver = NotificationCenter.default.addObserver(
+            forName: .boulderResumeFocus, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.cancelPendingTermination() }
+        }
+
+        // Step 4: schedule the actual termination + grain forfeit.
+        pendingTerminationTask?.cancel()
+        pendingTerminationTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            if Task.isCancelled { return }
+            await self?.executeBlock(app: runningApp, displayName: match.displayName, bundleID: bid)
+        }
+    }
+
+    private func cancelPendingTermination() {
+        pendingTerminationTask?.cancel()
+        pendingTerminationTask = nil
+        pendingApp = nil
+        if let obs = resumeObserver {
+            NotificationCenter.default.removeObserver(obs)
+            resumeObserver = nil
+        }
+        FocusLockoutWindow.dismiss()
+        NSLog("Boulder: user clicked 'I'm back' — termination canceled, no penalty")
+    }
+
+    private func executeBlock(app: NSRunningApplication?, displayName: String, bundleID: String) async {
+        guard let store else { return }
+        pendingApp = nil
+        if let obs = resumeObserver {
+            NotificationCenter.default.removeObserver(obs)
+            resumeObserver = nil
+        }
+
+        // Forfeit grains banked THIS SESSION (not the rock's claimed grains).
+        let forfeited = store.pendingPixelCount
+        store.forfeitSessionGrains()
+
+        // Terminate the offending app — graceful first, then force.
+        if let app {
+            _ = app.terminate()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak app] in
+                guard let a = app, !a.isTerminated else { return }
+                a.forceTerminate()
+            }
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        FocusLockoutWindow.showBlocked(appName: displayName, grainsLost: forfeited)
+
+        // Rate-limit the toast notification.
         let now = Date()
         guard now.timeIntervalSince(lastCrumbleAt) >= cooldown else { return }
         lastCrumbleAt = now
-        if !didTerminate {
-            NSLog("Boulder: terminate() returned false for \(bid) — relying on forceTerminate fallback")
-        }
-        notifyCrumble(appName: match.displayName)
+        notifyCrumble(appName: displayName, grainsLost: forfeited)
     }
 
-    private func notifyCrumble(appName: String) {
+    private func notifyCrumble(appName: String, grainsLost: Int) {
         let content = UNMutableNotificationContent()
         content.title = "🪨 Blocked during focus"
-        content.body = "\(appName) was closed. Get back to your rock."
+        let suffix = grainsLost == 1 ? "grain" : "grains"
+        content.body = grainsLost > 0
+            ? "\(appName) closed. Forfeited \(grainsLost) banked \(suffix). Your rock is safe."
+            : "\(appName) closed. Get back to your rock."
         content.sound = nil
         let req = UNNotificationRequest(
             identifier: "boulder.crumble.\(Int(Date().timeIntervalSince1970))",

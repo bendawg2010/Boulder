@@ -15,6 +15,11 @@ struct SettingsView: View {
     @State private var editingTag: FocusTag? = nil
     @State private var presentTagEditor: Bool = false
     @State private var presentPairSheet: Bool = false
+    @State private var presentNewGroupPrompt: Bool = false
+    @State private var presentJoinGroupPrompt: Bool = false
+    @State private var newGroupName: String = ""
+    @State private var joinGroupCode: String = ""
+    @State private var groupError: String? = nil
 
     enum Tab: Hashable { case general, tags, blocked, stats, about }
 
@@ -51,6 +56,57 @@ struct SettingsView: View {
         .sheet(isPresented: $presentPairSheet) {
             PairDeviceSheet()
                 .environmentObject(store)
+        }
+        .alert("New group rock", isPresented: $presentNewGroupPrompt) {
+            TextField("Group name", text: $newGroupName)
+            Button("Create", action: { confirmCreateGroup() })
+            Button("Cancel", role: .cancel) { newGroupName = "" }
+        } message: {
+            Text("Friends can join with the 6-letter invite code Boulder will give you.")
+        }
+        .alert("Join group rock", isPresented: $presentJoinGroupPrompt) {
+            TextField("6-letter code", text: $joinGroupCode)
+            Button("Join", action: { confirmJoinGroup() })
+            Button("Cancel", role: .cancel) { joinGroupCode = "" }
+        } message: {
+            Text("Ask the group creator for their invite code.")
+        }
+        .alert("Group error", isPresented: Binding(
+            get: { groupError != nil },
+            set: { if !$0 { groupError = nil } }
+        )) {
+            Button("OK") { groupError = nil }
+        } message: {
+            Text(groupError ?? "")
+        }
+    }
+
+    private func confirmCreateGroup() {
+        let name = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+        newGroupName = ""
+        guard !name.isEmpty else { return }
+        Task { @MainActor in
+            if let g = await store.createGroup(name: name) {
+                let pb = NSPasteboard.general
+                pb.clearContents()
+                pb.setString(g.inviteCode, forType: .string)
+            } else {
+                groupError = "Couldn't reach the server. Try again."
+            }
+        }
+    }
+
+    private func confirmJoinGroup() {
+        let raw = joinGroupCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        joinGroupCode = ""
+        guard raw.range(of: "^[A-Z2-9]{6}$", options: .regularExpression) != nil else {
+            groupError = "Invite codes are 6 letters/digits (no 0/O/1/I)."
+            return
+        }
+        Task { @MainActor in
+            if await store.joinGroup(code: raw) == nil {
+                groupError = "No group with that code, or you couldn't reach the server."
+            }
         }
     }
 
@@ -102,6 +158,42 @@ struct SettingsView: View {
                         .disabled(store.model.syncID == nil || !store.model.cloudSyncEnabled)
                 }
                 Text("Your rock uploads to Cloudflare D1 keyed by sync_id. Scan the QR from your phone to open the same rock in any browser.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Section("Group rocks") {
+                ForEach(store.model.groups) { group in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(group.name).font(.body.weight(.semibold))
+                            Text(group.inviteCode)
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.secondary)
+                                .tracking(0.1)
+                        }
+                        Spacer()
+                        Toggle("", isOn: Binding(
+                            get: { group.contributesGrains },
+                            set: { store.setGroupContributes(id: group.id, contributes: $0) }
+                        )).labelsHidden()
+                        Link(destination: URL(string: "https://boulder-43p.pages.dev/g/\(group.inviteCode)")!) {
+                            Image(systemName: "arrow.up.right.square")
+                        }
+                        Button {
+                            store.leaveGroup(id: group.id)
+                        } label: {
+                            Image(systemName: "minus.circle.fill")
+                                .foregroundStyle(Color(hex: 0xFF6B6B))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                HStack {
+                    Button("+ New group") { presentNewGroupPrompt = true }
+                    Button("Join with code") { presentJoinGroupPrompt = true }
+                }
+                Text("Group rocks are rocks you grow with friends. Each member's claimed grains land on the same rock. Anyone with the 6-letter invite code can join.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

@@ -64,6 +64,7 @@ function emptyModel() {
     syncID: null,
     cloudSyncEnabled: true,
     contributeToCommunity: false,
+    groups: [],   // [{id, name, inviteCode, contributesGrains}]
   };
 }
 function nowSec() { return Math.floor(Date.now() / 1000); }
@@ -530,7 +531,7 @@ function claimGrains() {
 }
 
 async function contributeIfEnabled(firstNewIndex) {
-  if (!model.contributeToCommunity || !model.syncID || !model.userFirstName) return;
+  if (!model.syncID || !model.userFirstName) return;
   const newPixels = model.pixels.slice(firstNewIndex);
   if (newPixels.length === 0) return;
   const tagsByID = Object.fromEntries(model.tags.map((t) => [t.id, t]));
@@ -549,17 +550,29 @@ async function contributeIfEnabled(firstNewIndex) {
     };
   }).filter(Boolean);
   if (grains.length === 0) return;
-  try {
-    await fetch("/api/community", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sync_id: model.syncID.toLowerCase(),
-        contributor_name: model.userFirstName,
-        grains,
-      }),
-    });
-  } catch {/* fire-and-forget */}
+  const body = {
+    sync_id: model.syncID.toLowerCase(),
+    contributor_name: model.userFirstName,
+    grains,
+  };
+  const headers = { "Content-Type": "application/json" };
+
+  // Global Community Rock (opt-in).
+  if (model.contributeToCommunity) {
+    try {
+      await fetch("/api/community", { method: "POST", headers, body: JSON.stringify(body) });
+    } catch {/* fire-and-forget */}
+  }
+
+  // Group rocks the user has joined (each can be opted out individually).
+  for (const g of (model.groups || [])) {
+    if (!g.contributesGrains) continue;
+    try {
+      await fetch(`/api/groups/${encodeURIComponent(g.id)}/grains`, {
+        method: "POST", headers, body: JSON.stringify(body),
+      });
+    } catch {/* fire-and-forget */}
+  }
 }
 
 // ---------------- Share ----------------
@@ -634,6 +647,8 @@ function bindOnboarding() {
     model.userFirstName = n;
     const r = rockInput.value.trim();
     model.rockName = r || null;
+    const contribEl = document.getElementById("onb-contribute");
+    model.contributeToCommunity = !!(contribEl && contribEl.checked);
     writeLocal(model);
     schedulePush();
     document.getElementById("onboarding").hidden = true;
@@ -720,6 +735,10 @@ function bindSettings() {
     if (!model.syncID) return;
     navigator.clipboard.writeText(model.syncID).then(() => flashStatus("copied"));
   });
+  renderGroups();
+  document.getElementById("group-create").addEventListener("click", createGroup);
+  document.getElementById("group-join").addEventListener("click", joinGroup);
+
   const contribToggle = document.getElementById("contribute-toggle");
   if (contribToggle) {
     contribToggle.checked = !!model.contributeToCommunity;
@@ -816,6 +835,88 @@ function bindTagEditor() {
     paletteCache.clear();
     renderRock();
   });
+}
+
+function renderGroups() {
+  const list = document.getElementById("groups-list");
+  if (!list) return;
+  list.textContent = "";
+  if (!model.groups || model.groups.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "muted small";
+    empty.style.fontStyle = "italic";
+    empty.textContent = "Not in any groups yet.";
+    list.appendChild(empty);
+    return;
+  }
+  for (const g of model.groups) {
+    const row = document.createElement("div");
+    row.className = "group-item";
+    const name = document.createElement("span");
+    name.className = "group-name";
+    name.textContent = g.name;
+    const code = document.createElement("span");
+    code.className = "group-code";
+    code.textContent = g.inviteCode;
+    const link = document.createElement("a");
+    link.href = `/g/${encodeURIComponent(g.inviteCode)}`;
+    link.target = "_blank";
+    link.textContent = "View";
+    const leave = document.createElement("button");
+    leave.className = "group-leave";
+    leave.title = "Leave group";
+    leave.textContent = "×";
+    leave.addEventListener("click", () => {
+      if (!confirm(`Leave "${g.name}"? You can rejoin with the code.`)) return;
+      model.groups = model.groups.filter((x) => x.id !== g.id);
+      writeLocal(model); schedulePush(); renderGroups();
+    });
+    row.appendChild(name);
+    row.appendChild(code);
+    row.appendChild(link);
+    row.appendChild(leave);
+    list.appendChild(row);
+  }
+}
+
+async function createGroup() {
+  const name = prompt("Name your group rock:");
+  if (!name) return;
+  if (!model.syncID) { alert("Save your name first."); return; }
+  try {
+    const res = await fetch("/api/groups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sync_id: model.syncID.toLowerCase(), name }),
+    });
+    if (!res.ok) { alert("Couldn't create group."); return; }
+    const g = await res.json();
+    model.groups = model.groups || [];
+    model.groups.push({ id: g.id, name: g.name, inviteCode: g.invite_code, contributesGrains: true });
+    writeLocal(model); schedulePush(); renderGroups();
+    alert(`Group "${g.name}" created!\n\nInvite code: ${g.invite_code}\n\nShare boulder-43p.pages.dev/g/${g.invite_code} with friends.`);
+  } catch {
+    alert("Couldn't reach server.");
+  }
+}
+
+async function joinGroup() {
+  const raw = prompt("Enter the 6-letter invite code:");
+  if (!raw) return;
+  const code = raw.trim().toUpperCase();
+  if (!/^[A-Z2-9]{6}$/.test(code)) { alert("Invalid code format."); return; }
+  try {
+    const res = await fetch(`/api/groups?code=${encodeURIComponent(code)}`);
+    if (res.status === 404) { alert("No group with that code."); return; }
+    if (!res.ok) { alert("Couldn't look up group."); return; }
+    const body = await res.json();
+    const g = body.group;
+    if (model.groups.some((x) => x.id === g.id)) { alert("You're already in this group."); return; }
+    model.groups.push({ id: g.id, name: g.name, inviteCode: g.invite_code, contributesGrains: true });
+    writeLocal(model); schedulePush(); renderGroups();
+  } catch {
+    alert("Couldn't reach server.");
+  }
 }
 
 function bindFocusUI() {

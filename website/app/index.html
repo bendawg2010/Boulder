@@ -97,6 +97,13 @@
         <input id="onb-name" type="text" placeholder="Ben" autocomplete="given-name" />
         <label class="field-label">Name your rock <span class="muted">(optional)</span></label>
         <input id="onb-rock" type="text" placeholder='"Granite"' autocomplete="off" />
+        <label class="toggle-row" style="margin-top:14px">
+          <input type="checkbox" id="onb-contribute" />
+          <span style="text-align:left">
+            <span style="display:block;font-weight:700">Contribute to the Community Rock</span>
+            <span class="muted small" style="display:block;margin-top:2px">Off by default. Each grain appears on the public rock with your name. Change anytime.</span>
+          </span>
+        </label>
         <button class="btn btn-start" id="onb-start" disabled>Start growing</button>
         <button class="onb-pair-link" id="onb-show-pair">
           🔗 Already have a rock on another device?
@@ -169,6 +176,18 @@
           <div class="sync-id-row">
             <code class="sync-id" id="sync-id-text">—</code>
             <button class="btn-small" id="copy-sync-id">Copy</button>
+          </div>
+        </section>
+
+        <section>
+          <label class="field-label">Group rocks</label>
+          <p class="muted small">
+            Make a rock with friends. Anyone with the 6-letter invite code can join from their app + see/contribute to the same rock.
+          </p>
+          <div id="groups-list" class="groups-list"></div>
+          <div class="groups-actions">
+            <button class="btn-small" id="group-create">+ New group</button>
+            <button class="btn-small" id="group-join">Join with code</button>
           </div>
         </section>
 

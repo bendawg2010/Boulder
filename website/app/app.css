@@ -408,6 +408,33 @@ input[type="text"]:focus { border-color: var(--magenta); background: rgba(255, 2
   accent-color: var(--mint);
 }
 
+.groups-list { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.group-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 13px;
+}
+.group-item .group-name { font-weight: 700; flex: 1; }
+.group-item .group-code {
+  font-family: ui-monospace, monospace;
+  font-size: 11px; color: var(--ink-3);
+  letter-spacing: 0.1em;
+}
+.group-item a {
+  font-size: 11px; font-weight: 700;
+  color: var(--blue);
+}
+.group-item .group-leave {
+  background: transparent; border: none;
+  color: var(--pink);
+  font-size: 14px; cursor: pointer;
+  padding: 2px 6px;
+}
+.groups-actions { display: flex; gap: 8px; margin-top: 10px; }
+
 .sheet-card { position: relative; }
 .sheet-card h2 { font-size: 20px; font-weight: 800; margin-bottom: 16px; }
 .sheet-card section { margin-bottom: 18px; }

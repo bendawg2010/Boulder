@@ -120,6 +120,99 @@ final class BoulderSync {
         }
     }
 
+    // MARK: Groups
+
+    /// Create a new group rock. Returns the GroupMembership with the
+    /// server-assigned id + invite code, or nil on failure.
+    func createGroup(syncID: UUID, name: String) async -> GroupMembership? {
+        var req = URLRequest(url: BoulderConfig.backendBase.appendingPathComponent("/api/groups"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["sync_id": syncID.uuidString.lowercased(), "name": name]
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        do {
+            let (data, resp) = try await URLSession.shared.data(for: req)
+            guard let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let id = obj["id"] as? String,
+                  let code = obj["invite_code"] as? String,
+                  let n = obj["name"] as? String
+            else { return nil }
+            return GroupMembership(id: id, name: n, inviteCode: code)
+        } catch {
+            NSLog("Boulder: createGroup error: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    /// Look up a group by invite code. Returns the membership or nil.
+    func lookupGroup(code: String) async -> GroupMembership? {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard trimmed.range(of: "^[A-Z2-9]{6}$", options: .regularExpression) != nil else { return nil }
+        var comps = URLComponents(url: BoulderConfig.backendBase.appendingPathComponent("/api/groups"),
+                                  resolvingAgainstBaseURL: false)
+        comps?.queryItems = [URLQueryItem(name: "code", value: trimmed)]
+        guard let url = comps?.url else { return nil }
+        do {
+            let (data, resp) = try await URLSession.shared.data(from: url)
+            guard let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let g = obj["group"] as? [String: Any],
+                  let id = g["id"] as? String,
+                  let code = g["invite_code"] as? String,
+                  let n = g["name"] as? String
+            else { return nil }
+            return GroupMembership(id: id, name: n, inviteCode: code)
+        } catch {
+            NSLog("Boulder: lookupGroup error: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    /// Push grains to a single group rock.
+    func contributeToGroup(
+        groupID: String,
+        syncID: UUID,
+        firstName: String,
+        grains: [(tagName: String, tagEmoji: String, hue: Double,
+                  shade: Int, blurb: String?, earnedAt: Date)]
+    ) {
+        guard !grains.isEmpty else { return }
+        let payload: [String: Any] = [
+            "sync_id": syncID.uuidString.lowercased(),
+            "contributor_name": firstName,
+            "grains": grains.map { g -> [String: Any] in
+                var o: [String: Any] = [
+                    "tag_name": g.tagName,
+                    "tag_emoji": g.tagEmoji,
+                    "hue": g.hue,
+                    "shade": g.shade,
+                    "earned_at": Int(g.earnedAt.timeIntervalSince1970),
+                ]
+                if let b = g.blurb, !b.isEmpty { o["blurb"] = b }
+                return o
+            },
+        ]
+        guard let body = try? JSONSerialization.data(withJSONObject: payload) else { return }
+        var req = URLRequest(url: BoulderConfig.backendBase
+            .appendingPathComponent("/api/groups")
+            .appendingPathComponent(groupID)
+            .appendingPathComponent("grains"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = body
+        Task {
+            do {
+                let (_, resp) = try await URLSession.shared.data(for: req)
+                if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                    NSLog("Boulder: group contribute failed status=\(http.statusCode)")
+                }
+            } catch {
+                NSLog("Boulder: group contribute error: \(error.localizedDescription)")
+            }
+        }
+    }
+
     /// Fetch the server's copy. Returns nil if no row exists yet on
     /// this device's first launch, or the network is unreachable.
     func pull(syncID: UUID) async -> BoulderModel? {
