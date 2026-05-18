@@ -383,13 +383,13 @@ a:hover { text-decoration: underline; }
 /* Download tiles — Mac + Windows side by side. */
 .dl-tiles {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  max-width: 880px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  max-width: 1080px;
   margin: 36px auto 0;
 }
-@media (max-width: 720px) {
-  .dl-tiles { grid-template-columns: 1fr; }
+@media (max-width: 920px) {
+  .dl-tiles { grid-template-columns: 1fr; max-width: 480px; }
 }
 .dl-tile {
   display: flex; flex-direction: column; gap: 6px;
@@ -409,6 +409,7 @@ a:hover { text-decoration: underline; }
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 .dl-tile.mac:hover { border-color: rgba(71, 160, 255, 0.55); box-shadow: 0 12px 32px rgba(71, 160, 255, 0.18); }
+.dl-tile.web:hover { border-color: rgba(255, 217, 96, 0.55); box-shadow: 0 12px 32px rgba(255, 217, 96, 0.18); }
 .dl-tile.windows:hover { border-color: rgba(46, 230, 160, 0.55); box-shadow: 0 12px 32px rgba(46, 230, 160, 0.18); }
 .dl-tile-platform {
   font-size: 13px; font-weight: 700;
@@ -429,6 +430,7 @@ a:hover { text-decoration: underline; }
   color: var(--mint); letter-spacing: 0.02em;
 }
 .dl-tile.mac .dl-tile-cta { color: var(--blue); }
+.dl-tile.web .dl-tile-cta { color: var(--gold); }
 
 /* Hero CTA: dual Mac + Windows buttons. */
 .btn-platform { margin-right: 4px; }
@@ -437,6 +439,12 @@ a:hover { text-decoration: underline; }
 }
 .btn.primary.windows-beta:hover {
   box-shadow: 0 10px 28px rgba(46, 230, 160, 0.25);
+}
+.btn.primary.web-now {
+  background: linear-gradient(90deg, var(--gold), var(--pink));
+}
+.btn.primary.web-now:hover {
+  box-shadow: 0 10px 28px rgba(255, 217, 96, 0.30);
 }
 
 footer {

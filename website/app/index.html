@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Boulder — your rock, anywhere</title>
+    <meta name="theme-color" content="#06010f" />
+    <meta name="description" content="Boulder running in your browser. Same rock, any device." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E🪨%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./app.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span>🪨</span>
+        <span class="brand-name">Boulder</span>
+      </div>
+      <div class="topbar-right">
+        <span class="sync-status" id="sync-status">offline</span>
+        <button class="icon-btn" id="settings-toggle" aria-label="Settings">⚙</button>
+      </div>
+    </header>
+
+    <main class="app">
+      <section class="hero">
+        <div class="tier" id="tier-name">Pebble</div>
+        <div class="tier-sub" id="tier-sub">60 grains to Stone</div>
+        <div class="grain-count" id="grain-count">0 grains</div>
+      </section>
+
+      <section class="canvas-wrap">
+        <canvas id="rock"></canvas>
+        <div class="empty" id="empty-state">
+          <div class="empty-rock">🪨</div>
+          <div>Your Boulder is a pebble.</div>
+          <div class="empty-sub">Pick a tag and hit Focus to start growing.</div>
+        </div>
+      </section>
+
+      <div class="action-row" id="action-row" hidden>
+        <button class="btn btn-claim" id="claim-btn" hidden>
+          <span>✨</span><span id="claim-label">Claim 0 grains</span>
+        </button>
+        <button class="btn btn-share" id="share-btn">
+          <span>↗</span><span class="btn-share-label">Share</span>
+        </button>
+      </div>
+
+      <section class="tag-row" id="tag-row" aria-label="Pick a tag"></section>
+
+      <section class="focus-block">
+        <label class="field-label">What are you focusing on?</label>
+        <input id="blurb" type="text" placeholder='e.g. "Studying for exams"' autocomplete="off" />
+
+        <div class="duration-row" role="radiogroup">
+          <button class="chip" data-mins="15">15m</button>
+          <button class="chip" data-mins="25">25m</button>
+          <button class="chip" data-mins="45">45m</button>
+          <button class="chip" data-mins="60">1h</button>
+          <button class="chip chip-open active" data-mins="">Open</button>
+        </div>
+
+        <div class="timer-row">
+          <div class="timer" id="timer-text">00:00</div>
+          <button class="btn btn-focus" id="focus-btn">Focus</button>
+        </div>
+      </section>
+
+      <footer class="bottom-tip">
+        🪨 Made with Boulder · <a href="/">boulder-43p.pages.dev</a>
+      </footer>
+    </main>
+
+    <!-- Onboarding -->
+    <div class="modal" id="onboarding" hidden>
+      <div class="modal-card">
+        <div class="modal-emoji">🪨</div>
+        <h1>Welcome to Boulder</h1>
+        <p>A pet rock for your focus. Grow it from any device.</p>
+        <label class="field-label">Your first name</label>
+        <input id="onb-name" type="text" placeholder="Ben" autocomplete="given-name" />
+        <label class="field-label">Name your rock <span class="muted">(optional)</span></label>
+        <input id="onb-rock" type="text" placeholder='"Granite"' autocomplete="off" />
+        <button class="btn btn-start" id="onb-start" disabled>Start growing</button>
+        <p class="onb-foot">Already have a rock on your Mac? Tap ⚙ → Pair to scan the QR code.</p>
+      </div>
+    </div>
+
+    <!-- Settings sheet -->
+    <div class="sheet" id="settings-sheet" hidden>
+      <div class="sheet-card">
+        <button class="sheet-close" id="settings-close" aria-label="Close">×</button>
+        <h2>Settings</h2>
+
+        <section>
+          <label class="field-label">Your first name</label>
+          <input id="set-name" type="text" />
+        </section>
+
+        <section>
+          <label class="field-label">Rock name</label>
+          <input id="set-rock" type="text" placeholder="(optional)" />
+        </section>
+
+        <section>
+          <label class="field-label">Pair another device</label>
+          <p class="muted small">
+            Paste this sync ID into another browser, or open Boulder.app on your Mac
+            and click ⚙ → Pair to see the same rock there.
+          </p>
+          <div class="sync-id-row">
+            <code class="sync-id" id="sync-id-text">—</code>
+            <button class="btn-small" id="copy-sync-id">Copy</button>
+          </div>
+        </section>
+
+        <section>
+          <label class="field-label">Reset</label>
+          <p class="muted small">Forget this device — clears your sync ID and starts over.</p>
+          <button class="btn-danger" id="reset-btn">Forget device</button>
+        </section>
+
+        <section class="sheet-foot">
+          <a href="https://github.com/bendawg2010/Boulder" target="_blank" rel="noopener">Source on GitHub</a>
+          ·
+          <a href="https://cash.app/$Dryeetsolutions" target="_blank" rel="noopener">Tip $5</a>
+        </section>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

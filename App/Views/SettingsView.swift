@@ -14,6 +14,7 @@ struct SettingsView: View {
     @State private var selection: Tab = .general
     @State private var editingTag: FocusTag? = nil
     @State private var presentTagEditor: Bool = false
+    @State private var presentPairSheet: Bool = false
 
     enum Tab: Hashable { case general, tags, blocked, stats, about }
 
@@ -45,6 +46,10 @@ struct SettingsView: View {
         .frame(width: 520, height: 580)
         .sheet(isPresented: $presentTagEditor) {
             TagEditorView(existing: editingTag)
+                .environmentObject(store)
+        }
+        .sheet(isPresented: $presentPairSheet) {
+            PairDeviceSheet()
                 .environmentObject(store)
         }
     }
@@ -90,10 +95,13 @@ struct SettingsView: View {
                             .textSelection(.enabled)
                     }
                 }
-                if store.model.appleUserID != nil {
-                    LabeledContent("Apple Sign-In", value: "Linked")
+                HStack {
+                    Text("Pair another device")
+                    Spacer()
+                    Button("Show QR code…") { presentPairSheet = true }
+                        .disabled(store.model.syncID == nil || !store.model.cloudSyncEnabled)
                 }
-                Text("Your rock uploads to Supabase keyed by sync_id. Anyone with your sync_id can read or overwrite the row — keep it private.")
+                Text("Your rock uploads to Supabase keyed by sync_id. Scan the QR from your phone to open the same rock in any browser.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

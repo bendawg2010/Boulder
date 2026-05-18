@@ -7,6 +7,23 @@
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <item>
+      <title>v1.8.0</title>
+      <pubDate>Mon, 18 May 2026 00:35:09 +0000</pubDate>
+      <sparkle:version>1.8.0</sparkle:version>
+      <sparkle:shortVersionString>1.8.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <b>Boulder works on your phone now.</b> New web app at boulder-43p.pages.dev/app — same rock, same algorithm, in any browser. Pair from the Mac app via QR code in Settings → Cloud sync. Removed broken Sign in with Apple (it required a paid Dev account to work). Cloud sync is on by default after onboarding. Windows MSI now builds on GitHub Actions (still in development). For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.8.0/Boulder.dmg"
+        sparkle:version="1.8.0"
+        sparkle:shortVersionString="1.8.0"
+        length="2333171"
+        type="application/octet-stream"
+        sparkle:edSignature="JDVqDeLDHaOXWvYJY00QTQALD0jEWkibqnt19p3QjaHMqtjk/c9BFdQhplNPIpiJXGUuFDUI7tmgC7RHDR7yDQ==" />
+    </item>
+    <item>
       <title>v1.7.1</title>
       <pubDate>Thu, 14 May 2026 20:29:07 +0000</pubDate>
       <sparkle:version>1.7.1</sparkle:version>

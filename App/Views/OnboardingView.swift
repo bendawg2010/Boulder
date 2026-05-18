@@ -1,17 +1,18 @@
 // OnboardingView.swift
 //
-// First-launch sheet. Two paths to identity:
+// First-launch sheet. Manual name entry + optional rock name.
 //
-//   1. Sign in with Apple (preferred) — pulls the user's first name
-//      automatically and stamps a stable userID we can use as the
-//      cloud-sync row key. Honored at runtime only on builds signed
-//      with a real Apple Developer ID (paid program); ad-hoc builds
-//      surface an error and fall back gracefully.
-//   2. Manual name entry — first name required, rock name optional.
-//      Generates its own sync UUID locally; cloud sync stays opt-in.
+// We previously tried Sign in with Apple, but it requires the
+// `com.apple.developer.applesignin` entitlement to be *granted at
+// runtime* — which Apple only does for builds signed by a paid
+// Developer Program identity. Boulder ships ad-hoc-signed (free, MIT),
+// so the SIWA button always failed in practice. Removing it removes
+// the dishonest UI.
+//
+// Cross-device sync is provided by the auto-generated sync_id UUID
+// the store stamps on completion + the Pair Device QR in Settings.
 
 import SwiftUI
-import AuthenticationServices
 
 struct OnboardingView: View {
     @EnvironmentObject var store: BoulderStore
@@ -19,7 +20,6 @@ struct OnboardingView: View {
 
     @State private var firstName: String = ""
     @State private var rockName: String = ""
-    @State private var siwaError: String? = nil
     @FocusState private var firstNameFocused: Bool
 
     private var trimmedName: String {
@@ -33,9 +33,9 @@ struct OnboardingView: View {
                 startPoint: .top, endPoint: .bottom
             ).ignoresSafeArea()
 
-            VStack(spacing: 18) {
+            VStack(spacing: 20) {
                 Text("🪨")
-                    .font(.system(size: 56))
+                    .font(.system(size: 64))
                     .shadow(color: Color(hex: 0xC147FF).opacity(0.5), radius: 18)
 
                 VStack(spacing: 4) {
@@ -47,36 +47,7 @@ struct OnboardingView: View {
                         .foregroundStyle(.white.opacity(0.55))
                 }
 
-                // Sign in with Apple — provides identity + cloud sync.
-                SignInWithAppleButton(.signIn,
-                    onRequest: { req in
-                        req.requestedScopes = [.fullName]
-                    },
-                    onCompletion: handleSIWA
-                )
-                .signInWithAppleButtonStyle(.white)
-                .frame(width: 320, height: 44)
-                .cornerRadius(22)
-
-                if let err = siwaError {
-                    Text(err)
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.45))
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: 320)
-                }
-
-                HStack(spacing: 10) {
-                    Rectangle().fill(Color.white.opacity(0.12)).frame(height: 1)
-                    Text("OR")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.35))
-                        .tracking(0.6)
-                    Rectangle().fill(Color.white.opacity(0.12)).frame(height: 1)
-                }
-                .frame(maxWidth: 320)
-
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 14) {
                     field(
                         label: "Your first name",
                         subtitle: "Shown on rocks you share. Required.",
@@ -92,14 +63,14 @@ struct OnboardingView: View {
                         placeholder: "(optional)"
                     )
                 }
-                .frame(maxWidth: 320)
+                .frame(maxWidth: 340)
 
                 Button(action: saveManual) {
                     Text("Start growing")
                         .font(.system(size: 15, weight: .heavy))
                         .tracking(0.4)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 13)
                         .background(
                             LinearGradient(
                                 colors: trimmedName.isEmpty
@@ -114,15 +85,17 @@ struct OnboardingView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(trimmedName.isEmpty)
-                .frame(maxWidth: 320)
+                .frame(maxWidth: 340)
 
-                Text("You can change these anytime in Settings.")
+                Text("Cross-device sync is on by default. Open Settings → Pair to grow this same rock on your phone in any browser.")
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.45))
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 340)
             }
-            .padding(32)
+            .padding(40)
         }
-        .frame(width: 440, height: 620)
+        .frame(width: 440, height: 560)
         .onAppear { firstNameFocused = true }
     }
 
@@ -152,47 +125,11 @@ struct OnboardingView: View {
         }
     }
 
-    private func handleSIWA(_ result: Result<ASAuthorization, Error>) {
-        switch result {
-        case .failure(let error):
-            // Common case on ad-hoc builds: SIWA isn't actually
-            // granted at runtime → error 1000 ("unknown"). Tell the
-            // user to use the manual form and don't make a fuss.
-            let nsErr = error as NSError
-            if nsErr.code == ASAuthorizationError.canceled.rawValue {
-                siwaError = nil
-            } else {
-                // Quiet, non-alarming copy. Most users hitting this
-                // are on the free ad-hoc build where Apple's runtime
-                // entitlement check fails. The fallback form is right
-                // below — no reason to make it look like an error.
-                siwaError = "Sign in with the form below to keep going."
-            }
-            return
-        case .success(let auth):
-            guard let cred = auth.credential as? ASAuthorizationAppleIDCredential else {
-                siwaError = "Unexpected credential type."
-                return
-            }
-            let userID = cred.user
-            let given = cred.fullName?.givenName?.trimmingCharacters(in: .whitespacesAndNewlines)
-            store.completeAppleSignIn(userID: userID, firstName: given)
-            // If Apple didn't return a name (returning user), fall
-            // back to whatever the user typed in the form.
-            if store.model.userFirstName == nil || store.model.userFirstName?.isEmpty == true {
-                if !trimmedName.isEmpty {
-                    store.setIdentity(firstName: trimmedName, rockName: rockName)
-                }
-            }
-            siwaError = nil
-            dismiss()
-        }
-    }
-
     private func saveManual() {
         let name = trimmedName
         guard !name.isEmpty else { return }
         store.setIdentity(firstName: name, rockName: rockName.trimmingCharacters(in: .whitespacesAndNewlines))
+        store.setCloudSyncEnabled(true)   // auto-enable so sync just works
         dismiss()
     }
 }

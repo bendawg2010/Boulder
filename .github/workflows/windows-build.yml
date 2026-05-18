@@ -1,0 +1,62 @@
+# Boulder for Windows — Tauri build + MSI release upload.
+#
+# Triggers:
+#   - push of a v* tag             → build, attach MSI to that release
+#   - manual workflow_dispatch     → build, upload as a workflow artifact
+#
+# The Mac dev environment can't cross-compile a signed Windows MSI, so
+# this runs on a windows-latest runner. Unsigned for now (no
+# Authenticode cert); SmartScreen will warn on first install.
+
+name: windows-build
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: windows-app
+    env:
+      REF_NAME: ${{ github.ref }}
+      IS_TAG: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            windows-app/src-tauri/target
+          key: windows-cargo-${{ hashFiles('windows-app/src-tauri/Cargo.lock') }}
+
+      - name: Install tauri-cli
+        run: cargo install tauri-cli --version "^2.0"
+
+      - name: Build MSI
+        run: cargo tauri build --target x86_64-pc-windows-msvc
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Boulder-windows
+          path: windows-app/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
+
+      - name: Attach MSI to release (tag pushes only)
+        if: env.IS_TAG == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: windows-app/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
+          fail_on_unmatched_files: false
