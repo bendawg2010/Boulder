@@ -101,7 +101,23 @@ struct SettingsView: View {
                     Button("Show QR code…") { presentPairSheet = true }
                         .disabled(store.model.syncID == nil || !store.model.cloudSyncEnabled)
                 }
-                Text("Your rock uploads to Supabase keyed by sync_id. Scan the QR from your phone to open the same rock in any browser.")
+                Text("Your rock uploads to Cloudflare D1 keyed by sync_id. Scan the QR from your phone to open the same rock in any browser.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Section("Community rock") {
+                Toggle("Contribute claimed grains", isOn: Binding(
+                    get: { store.model.contributeToCommunity },
+                    set: { store.setContributeToCommunity($0) }
+                ))
+                HStack {
+                    Text("View community rock")
+                    Spacer()
+                    Link("Open in browser",
+                         destination: URL(string: "https://boulder-43p.pages.dev/community")!)
+                }
+                Text("When on, each grain you claim is mirrored to the public Community Rock at boulder-43p.pages.dev/community. Other Boulder users can click any grain to see your first name, what you were working on, and when. Capped at 20,000 lifetime grains per device.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

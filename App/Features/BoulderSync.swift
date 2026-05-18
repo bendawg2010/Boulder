@@ -74,6 +74,52 @@ final class BoulderSync {
 
     // MARK: Pull
 
+    // MARK: Community contribution
+
+    /// Push a batch of newly-claimed grains to the public Community
+    /// Rock. Each grain carries the contributor's first name + the
+    /// tag's name/emoji/hue + the session blurb (if any) + earnedAt.
+    /// Caller is responsible for the cloudSyncEnabled / opt-in gate.
+    func contributeToCommunity(
+        syncID: UUID,
+        firstName: String,
+        grains: [(tagName: String, tagEmoji: String, hue: Double,
+                  shade: Int, blurb: String?, earnedAt: Date)]
+    ) {
+        guard !grains.isEmpty else { return }
+        let payload: [String: Any] = [
+            "sync_id": syncID.uuidString.lowercased(),
+            "contributor_name": firstName,
+            "grains": grains.map { g -> [String: Any] in
+                var o: [String: Any] = [
+                    "tag_name": g.tagName,
+                    "tag_emoji": g.tagEmoji,
+                    "hue": g.hue,
+                    "shade": g.shade,
+                    "earned_at": Int(g.earnedAt.timeIntervalSince1970),
+                ]
+                if let b = g.blurb, !b.isEmpty { o["blurb"] = b }
+                return o
+            },
+        ]
+        guard let body = try? JSONSerialization.data(withJSONObject: payload) else { return }
+
+        var req = URLRequest(url: BoulderConfig.backendBase.appendingPathComponent("/api/community"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = body
+        Task {
+            do {
+                let (_, resp) = try await URLSession.shared.data(for: req)
+                if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                    NSLog("Boulder: community contribute failed status=\(http.statusCode)")
+                }
+            } catch {
+                NSLog("Boulder: community contribute error: \(error.localizedDescription)")
+            }
+        }
+    }
+
     /// Fetch the server's copy. Returns nil if no row exists yet on
     /// this device's first launch, or the network is unreachable.
     func pull(syncID: UUID) async -> BoulderModel? {

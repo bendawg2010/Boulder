@@ -261,6 +261,32 @@ final class BoulderStore: ObservableObject {
         guard count > 0 else { return }
         let firstNewIndex = model.pixels.count
         for _ in 0..<count { emitPixel() }
+
+        // Community contribution — opt-in. Builds the grain records
+        // straight from the freshly-emitted pixels so the public rock
+        // mirrors what just landed on the user's personal rock.
+        if model.contributeToCommunity,
+           let syncID = model.syncID,
+           let firstName = model.userFirstName, !firstName.isEmpty
+        {
+            let newPixels = model.pixels[firstNewIndex...]
+            let tagsByID = Dictionary(uniqueKeysWithValues: model.tags.map { ($0.id, $0) })
+            let sessionsByID = Dictionary(uniqueKeysWithValues: model.sessions.map { ($0.id, $0) })
+            let payload: [(tagName: String, tagEmoji: String, hue: Double,
+                          shade: Int, blurb: String?, earnedAt: Date)] =
+                newPixels.compactMap { p in
+                    guard let tagID = p.tagID, let tag = tagsByID[tagID] else { return nil }
+                    let blurb = p.sessionID.flatMap { sessionsByID[$0]?.blurb }
+                    return (tag.name, tag.emoji, tag.hue, p.shade,
+                            (blurb?.isEmpty == false) ? blurb : nil,
+                            p.earnedAt ?? Date())
+                }
+            BoulderSync.shared.contributeToCommunity(
+                syncID: syncID,
+                firstName: firstName,
+                grains: payload
+            )
+        }
         // Long, deliberate pacing — each grain should feel like a
         // gem landing on the rock. Floor 0.14s so a tiny flush still
         // unfolds; ceiling 0.32s so a 5-grain claim takes ~1.5s and a
@@ -418,6 +444,12 @@ final class BoulderStore: ObservableObject {
 
     func setCloudSyncEnabled(_ enabled: Bool) {
         model.cloudSyncEnabled = enabled
+        if enabled, model.syncID == nil { model.syncID = UUID() }
+        persist()
+    }
+
+    func setContributeToCommunity(_ enabled: Bool) {
+        model.contributeToCommunity = enabled
         if enabled, model.syncID == nil { model.syncID = UUID() }
         persist()
     }

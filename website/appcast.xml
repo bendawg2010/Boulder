@@ -7,6 +7,23 @@
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <item>
+      <title>v1.10.0</title>
+      <pubDate>Mon, 18 May 2026 01:16:02 +0000</pubDate>
+      <sparkle:version>1.10.0</sparkle:version>
+      <sparkle:shortVersionString>1.10.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <b>Community Rock 🪨</b> — a shared global rock at boulder-43p.pages.dev/community that grows with every focused minute. Click any grain to see who and what. Opt-in in Settings. Standalone onboarding window (no more losing pair state when you Cmd-Tab). Settings button actually opens now. For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.10.0/Boulder.dmg"
+        sparkle:version="1.10.0"
+        sparkle:shortVersionString="1.10.0"
+        length="2373276"
+        type="application/octet-stream"
+        sparkle:edSignature="fyoC7vt4RVjYpY0xxJYdZOBXOzkGQKwCPNPEflCMuqDDLzp50UZi89ml2pgrMxd/lotYxVo5VHhavxdAacIYDg==" />
+    </item>
+    <item>
       <title>v1.9.0</title>
       <pubDate>Mon, 18 May 2026 00:51:01 +0000</pubDate>
       <sparkle:version>1.9.0</sparkle:version>

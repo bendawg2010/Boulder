@@ -396,6 +396,18 @@ input[type="text"]:focus { border-color: var(--magenta); background: rgba(255, 2
 }
 .btn-primary-small:hover { transform: translateY(-1px); }
 
+.toggle-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.toggle-row input[type="checkbox"] {
+  width: 18px; height: 18px;
+  cursor: pointer;
+  accent-color: var(--mint);
+}
+
 .sheet-card { position: relative; }
 .sheet-card h2 { font-size: 20px; font-weight: 800; margin-bottom: 16px; }
 .sheet-card section { margin-bottom: 18px; }

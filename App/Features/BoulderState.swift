@@ -154,7 +154,8 @@ struct BoulderModel: Codable {
     private enum CodingKeys: String, CodingKey {
         case schemaVersion, id, startedAt, pixels, pixelAccumulator,
              range, blockedApps, tags, sessions,
-             userFirstName, rockName, appleUserID, syncID, cloudSyncEnabled
+             userFirstName, rockName, appleUserID, syncID, cloudSyncEnabled,
+             contributeToCommunity
     }
 
     init() {}
@@ -175,6 +176,7 @@ struct BoulderModel: Codable {
         self.appleUserID      = try? c.decodeIfPresent(String.self, forKey: .appleUserID)
         self.syncID           = try? c.decodeIfPresent(UUID.self, forKey: .syncID)
         self.cloudSyncEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .cloudSyncEnabled)) ?? false
+        self.contributeToCommunity = (try? c.decodeIfPresent(Bool.self, forKey: .contributeToCommunity)) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -193,6 +195,7 @@ struct BoulderModel: Codable {
         try c.encodeIfPresent(appleUserID, forKey: .appleUserID)
         try c.encodeIfPresent(syncID, forKey: .syncID)
         try c.encode(cloudSyncEnabled, forKey: .cloudSyncEnabled)
+        try c.encode(contributeToCommunity, forKey: .contributeToCommunity)
     }
 
     /// First name the user entered during onboarding. Used in the
@@ -222,6 +225,11 @@ struct BoulderModel: Codable {
     /// flipped on by Sign in with Apple flow or the explicit Settings
     /// toggle.
     var cloudSyncEnabled: Bool = false
+
+    /// True when the user has opted in to contributing claimed grains
+    /// to the global Community Rock at boulder-43p.pages.dev/community.
+    /// Defaults false — explicit opt-in only.
+    var contributeToCommunity: Bool = false
 
     var pixelCount: Int { pixels.count }
     var tier: SizeTier { SizeTier.from(pixelCount: pixelCount) }

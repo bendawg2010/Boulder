@@ -63,6 +63,7 @@ function emptyModel() {
     rockName: null,
     syncID: null,
     cloudSyncEnabled: true,
+    contributeToCommunity: false,
   };
 }
 function nowSec() { return Math.floor(Date.now() / 1000); }
@@ -163,10 +164,18 @@ async function syncPush() {
   }
 }
 
+// Status labels you actually see in the pill — keep them short.
+// We avoid the literal word "synced" because users read that as
+// "matches my other device" rather than "saved to cloud."
+const STATUS_LABEL = {
+  syncing: "Saving…",
+  synced:  "Saved",
+  error:   "Offline",
+};
 function setStatus(s) {
   const el = document.getElementById("sync-status");
   el.className = "sync-status " + s;
-  el.textContent = s;
+  el.textContent = STATUS_LABEL[s] || s;
 }
 
 // ---------------- Renderer ----------------
@@ -503,6 +512,7 @@ function claimGrains() {
   pendingCount = 0;
   if (count <= 0) return;
   const sid = currentSessionID || (model.sessions[model.sessions.length - 1]?.id);
+  const firstNew = model.pixels.length;
   for (let i = 0; i < count; i++) {
     const idx = model.pixels.length;
     if (idx >= ALL_CELLS.length) break;
@@ -515,7 +525,41 @@ function claimGrains() {
   }
   writeLocal(model);
   schedulePush();
+  contributeIfEnabled(firstNew);
   renderAll();
+}
+
+async function contributeIfEnabled(firstNewIndex) {
+  if (!model.contributeToCommunity || !model.syncID || !model.userFirstName) return;
+  const newPixels = model.pixels.slice(firstNewIndex);
+  if (newPixels.length === 0) return;
+  const tagsByID = Object.fromEntries(model.tags.map((t) => [t.id, t]));
+  const sessionsByID = Object.fromEntries(model.sessions.map((s) => [s.id, s]));
+  const grains = newPixels.map((p) => {
+    const tag = p.tagID ? tagsByID[p.tagID] : null;
+    if (!tag) return null;
+    const blurb = p.sessionID ? sessionsByID[p.sessionID]?.blurb : null;
+    return {
+      tag_name: tag.name,
+      tag_emoji: tag.emoji,
+      hue: tag.hue,
+      shade: p.shade,
+      blurb: blurb || null,
+      earned_at: p.earnedAt || nowSec(),
+    };
+  }).filter(Boolean);
+  if (grains.length === 0) return;
+  try {
+    await fetch("/api/community", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sync_id: model.syncID.toLowerCase(),
+        contributor_name: model.userFirstName,
+        grains,
+      }),
+    });
+  } catch {/* fire-and-forget */}
 }
 
 // ---------------- Share ----------------
@@ -676,6 +720,14 @@ function bindSettings() {
     if (!model.syncID) return;
     navigator.clipboard.writeText(model.syncID).then(() => flashStatus("copied"));
   });
+  const contribToggle = document.getElementById("contribute-toggle");
+  if (contribToggle) {
+    contribToggle.checked = !!model.contributeToCommunity;
+    contribToggle.addEventListener("change", () => {
+      model.contributeToCommunity = !!contribToggle.checked;
+      writeLocal(model); schedulePush();
+    });
+  }
   document.getElementById("reset-btn").addEventListener("click", () => {
     if (!confirm("Forget this device? Your rock stays in the cloud — paste your sync ID back to recover it.")) return;
     localStorage.removeItem(STORAGE_KEY);

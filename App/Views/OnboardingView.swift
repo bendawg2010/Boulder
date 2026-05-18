@@ -16,7 +16,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @EnvironmentObject var store: BoulderStore
-    @Environment(\.dismiss) private var dismiss
+    var onDismiss: () -> Void = {}
 
     @State private var firstName: String = ""
     @State private var rockName: String = ""
@@ -253,7 +253,7 @@ struct OnboardingView: View {
         guard !name.isEmpty else { return }
         store.setIdentity(firstName: name, rockName: rockName.trimmingCharacters(in: .whitespacesAndNewlines))
         store.setCloudSyncEnabled(true)   // auto-enable so sync just works
-        dismiss()
+        onDismiss()
     }
 
     private func confirmPair() {
@@ -271,7 +271,7 @@ struct OnboardingView: View {
                 return
             }
             store.adoptPairedModel(model, syncID: id)
-            dismiss()
+            onDismiss()
         }
     }
 }

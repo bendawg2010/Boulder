@@ -80,18 +80,13 @@ struct PopoverContentView: View {
         } message: {
             Text("You committed to \(formatDuration(store.session(forID: store.currentSessionID)?.plannedDuration ?? 0)). Stopping now is fine — every grain you've earned is banked. You can claim them anytime.")
         }
-        .sheet(isPresented: $showOnboarding) {
-            OnboardingView()
-                .environmentObject(store)
-        }
         .onAppear {
-            // Drive sheet visibility from the model — but through a real
-            // @State Bool so dismiss() is reliable. SwiftUI sheets with
-            // computed Bindings sometimes don't dismiss cleanly.
-            showOnboarding = store.model.userFirstName == nil
-        }
-        .onChange(of: store.model.userFirstName) { _, newValue in
-            showOnboarding = newValue == nil
+            // Onboarding is its own NSWindow now (managed by
+            // AppDelegate). If the user reopens the popover before
+            // finishing onboarding, nudge the window forward.
+            if store.model.userFirstName == nil {
+                appDelegate.showOnboarding()
+            }
         }
     }
 

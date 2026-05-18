@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Boulder — community rock</title>
+    <meta name="description" content="The rock that grows with every focused minute of every Boulder user. Click any grain to see who was doing what." />
+    <meta property="og:title" content="Boulder — community rock" />
+    <meta property="og:description" content="A shared rock built one focused minute at a time, by everyone." />
+    <meta property="og:image" content="/og-card.png" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E🪨%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../app/app.css" />
+    <style>
+      .community-page {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding: 32px 18px;
+        max-width: 760px;
+        margin: 0 auto;
+        text-align: center;
+      }
+      .community-page h1 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        background: linear-gradient(90deg, #ffd960, #ff6b6b, #c147ff);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .community-page > p {
+        color: rgba(255, 255, 255, 0.65);
+        font-size: 15px;
+      }
+      .community-meta {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.5);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+      .community-canvas-wrap {
+        position: relative;
+        background: radial-gradient(ellipse at center, rgba(193, 71, 255, 0.12), transparent 70%);
+        padding: 24px;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .community-canvas-wrap canvas { display: block; max-width: 100%; height: auto; }
+      .community-tooltip {
+        position: absolute;
+        pointer-events: none;
+        background: rgba(20, 12, 36, 0.96);
+        color: white;
+        padding: 10px 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 217, 96, 0.4);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        opacity: 0;
+        transition: opacity 0.12s ease-out;
+        z-index: 10;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        max-width: 280px;
+        text-align: left;
+      }
+      .community-tooltip .row-title {
+        font-size: 13px; font-weight: 800;
+        margin-bottom: 4px;
+      }
+      .community-tooltip .row-tag {
+        font-size: 12px; font-weight: 600;
+        color: rgba(255, 217, 96, 0.85);
+        margin-bottom: 4px;
+      }
+      .community-tooltip .row-blurb {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.75);
+        font-style: italic;
+        margin-bottom: 4px;
+      }
+      .community-tooltip .row-when {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.5);
+        font-family: ui-monospace, monospace;
+      }
+      .community-hint {
+        font-size: 12px;
+        color: rgba(255, 217, 96, 0.7);
+      }
+      .community-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #ff6b6b, #c147ff);
+        color: white;
+        font-weight: 800;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body class="community-page">
+    <div class="community-meta" id="community-meta">Loading the rock…</div>
+    <h1>The community rock.</h1>
+    <p>Every grain is one focused minute from a Boulder user. Click any pixel to see who, when, and what.</p>
+    <div class="community-canvas-wrap">
+      <canvas id="community-canvas" width="760" height="500"></canvas>
+      <div class="community-tooltip" id="community-tooltip"></div>
+    </div>
+    <p class="community-hint">Hover or tap any grain. Refreshes every 60 seconds.</p>
+    <a class="community-back" href="/app/">Open your own rock →</a>
+    <p style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:24px">🪨 boulder-43p.pages.dev · MIT · open source</p>
+
+    <script src="./community.js"></script>
+  </body>
+</html>

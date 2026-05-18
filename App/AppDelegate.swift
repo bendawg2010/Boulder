@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var popover: NSPopover?
     var settingsWindow: NSWindow?
     var galleryWindow: NSWindow?
+    var onboardingWindow: NSWindow?
 
     private var tickCancellable: AnyCancellable?
     private var iconCancellable: AnyCancellable?
@@ -63,6 +64,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         _ = updater.controller
+
+        // If the user hasn't completed onboarding yet, present the
+        // standalone onboarding window. Standalone (not a popover
+        // sheet) so they can Cmd-Tab away to copy a sync ID from
+        // another device WITHOUT losing the pair-form state.
+        if store.model.userFirstName == nil {
+            DispatchQueue.main.async { [weak self] in self?.showOnboarding() }
+        }
+    }
+
+    /// Standalone window — survives popover open/close so pair-form
+    /// state doesn't get nuked when the user navigates away.
+    @MainActor
+    func showOnboarding() {
+        if let win = onboardingWindow {
+            promoteToRegularIfNeeded()
+            NSApp.activate(ignoringOtherApps: true)
+            win.makeKeyAndOrderFront(nil)
+            return
+        }
+        let win = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 440, height: 560),
+            styleMask: [.titled, .closable, .nonactivatingPanel, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        win.title = "Welcome to Boulder"
+        win.titlebarAppearsTransparent = true
+        win.titleVisibility = .hidden
+        win.isMovableByWindowBackground = true
+        win.center()
+        win.contentView = NSHostingView(
+            rootView: OnboardingView(onDismiss: { [weak self] in
+                self?.dismissOnboarding()
+            })
+            .environmentObject(store)
+        )
+        win.isReleasedWhenClosed = false
+        win.delegate = self
+        onboardingWindow = win
+        promoteToRegularIfNeeded()
+        NSApp.activate(ignoringOtherApps: true)
+        win.makeKeyAndOrderFront(nil)
+    }
+
+    @MainActor
+    func dismissOnboarding() {
+        onboardingWindow?.orderOut(nil)
+        DispatchQueue.main.async { [weak self] in self?.demoteToAccessoryIfQuiet() }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -180,12 +230,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Settings window
 
     func openSettings() {
-        // Close the popover FIRST. Buttons inside the popover don't
-        // cause it to lose focus on their own, so a new window opened
-        // from a popover-internal click ends up behind/under the
-        // popover and looks like "nothing happened."
-        if let popover, popover.isShown { popover.performClose(nil) }
-        DispatchQueue.main.async { [weak self] in self?.reallyOpenSettings() }
+        // Close the popover FIRST. performClose is animated (~150ms);
+        // if we create + key the new window inside that window we end
+        // up behind the still-animating popover and look invisible.
+        // Wait for the close to settle, then open Settings.
+        closePopoverThen { [weak self] in self?.reallyOpenSettings() }
     }
 
     private func reallyOpenSettings() {
@@ -220,8 +269,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func openGallery() {
         // Same popover-eats-focus fix as openSettings.
-        if let popover, popover.isShown { popover.performClose(nil) }
-        DispatchQueue.main.async { [weak self] in self?.reallyOpenGallery() }
+        closePopoverThen { [weak self] in self?.reallyOpenGallery() }
+    }
+
+    /// Closes the popover (if open) and runs `then` once it's actually
+    /// gone. performClose is animated; running the next action mid-
+    /// animation puts the new window behind the closing popover.
+    private func closePopoverThen(_ then: @escaping () -> Void) {
+        if let popover, popover.isShown {
+            popover.performClose(nil)
+            // 0.18s clears the popover's default close animation
+            // (~120-150ms) with a small margin.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: then)
+        } else {
+            then()
+        }
     }
 
     private func reallyOpenGallery() {
