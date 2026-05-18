@@ -4,9 +4,9 @@
 // `boulders` row keyed by sync_id. Anyone with the sync_id can edit;
 // pairing is "I scanned your QR and now I have your sync_id."
 
-const SUPABASE_URL = "https://ujkvqwkdtcwnxueitepm.supabase.co";
-const SUPABASE_ANON = "sb_publishable_NLjbb-i-mzAcO6G2h5zl6w_caxZ3kiY";
-const TABLE = "boulders";
+// Same-origin Pages Function backed by Cloudflare D1. The function
+// source is at website/functions/api/boulders.ts.
+const API_URL = "/api/boulders";
 
 const PIXELS_PER_SECOND = 1.0 / 300.0;          // 1 grain per 5 min
 const SCHEMA_VERSION = 3;
@@ -18,6 +18,35 @@ const DEFAULT_TAGS = [
   { id: crypto.randomUUID(), name: "Design",  emoji: "🎨", hue: 0.78 },
   { id: crypto.randomUUID(), name: "Study",   emoji: "🧠", hue: 0.36 },
 ];
+
+// Mirror of FocusTag.rockPresets in FocusTag.swift — same names + hues
+// so the Mac app and the web app pick from the same palette.
+const ROCK_PRESETS = [
+  { name: "Granite",   hue: 0.62 },
+  { name: "Slate",     hue: 0.58 },
+  { name: "Basalt",    hue: 0.05 },
+  { name: "Sandstone", hue: 0.09 },
+  { name: "Limestone", hue: 0.13 },
+  { name: "Schist",    hue: 0.25 },
+  { name: "Jade",      hue: 0.36 },
+  { name: "Marble",    hue: 0.55 },
+  { name: "Lapis",     hue: 0.65 },
+  { name: "Amethyst",  hue: 0.78 },
+  { name: "Quartz",    hue: 0.95 },
+  { name: "Hematite",  hue: 0.02 },
+];
+
+// Momentum tiers — must match BoulderStore.multiplier(forElapsed:) in Swift.
+function momentumFor(elapsedSec) {
+  let mult, label;
+  if (elapsedSec < 300)        { mult = 1.0;                          label = "Warming up"; }
+  else if (elapsedSec < 900)   { mult = lerp(1.0, 1.5, (elapsedSec -  300) /  600); label = "Rolling"; }
+  else if (elapsedSec < 1800)  { mult = lerp(1.5, 2.0, (elapsedSec -  900) /  900); label = "Locked in"; }
+  else if (elapsedSec < 3600)  { mult = lerp(2.0, 3.0, (elapsedSec - 1800) / 1800); label = "Flow state"; }
+  else                          { mult = 3.0;                          label = "Deep flow"; }
+  return { mult, label };
+}
+function lerp(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
 
 const STORAGE_KEY = "boulder.model.v1";
 
@@ -81,20 +110,16 @@ async function syncPull() {
   if (!model.syncID) return;
   setStatus("syncing");
   try {
-    const url = `${SUPABASE_URL}/rest/v1/${TABLE}?sync_id=eq.${encodeURIComponent(model.syncID.toLowerCase())}&select=payload,updated_at&limit=1`;
-    const res = await fetch(url, {
-      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` },
-    });
+    const res = await fetch(`${API_URL}?sync_id=${encodeURIComponent(model.syncID.toLowerCase())}`);
+    if (res.status === 404) { setStatus("synced"); return; }
     if (!res.ok) { setStatus("error"); return; }
-    const rows = await res.json();
-    if (!rows.length) { setStatus("synced"); return; }
-    const row = rows[0];
-    if (lastPulledUpdatedAt && row.updated_at === lastPulledUpdatedAt) {
+    const body = await res.json();
+    if (lastPulledUpdatedAt && body.updated_at === lastPulledUpdatedAt) {
       setStatus("synced");
       return;
     }
-    lastPulledUpdatedAt = row.updated_at;
-    const remote = row.payload;
+    lastPulledUpdatedAt = body.updated_at;
+    const remote = body.payload;
     if (remote && Array.isArray(remote.pixels) && remote.pixels.length >= model.pixels.length) {
       const syncID = model.syncID;
       model = { ...emptyModel(), ...remote, syncID, cloudSyncEnabled: true };
@@ -125,14 +150,9 @@ async function syncPush() {
       grain_count: model.pixels.length,
       schema_version: model.schemaVersion,
     };
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?on_conflict=sync_id`, {
+    const res = await fetch(API_URL, {
       method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON,
-        Authorization: `Bearer ${SUPABASE_ANON}`,
-        "Content-Type": "application/json",
-        Prefer: "resolution=merge-duplicates,return=minimal",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(row),
     });
     if (!res.ok) { setStatus("error"); return; }
@@ -317,13 +337,15 @@ function renderHUD() {
     `${model.pixels.length} grain${model.pixels.length === 1 ? "" : "s"}`;
 }
 
+let tagManageMode = false;
 function renderTags() {
   const row = document.getElementById("tag-row");
-  row.textContent = "";   // clear safely
+  row.textContent = "";
   for (const t of model.tags) {
     const el = document.createElement("button");
     el.className = "tag" + (t.id === selectedTagID ? " active" : "");
     el.dataset.id = t.id;
+    el.type = "button";
     const emoji = document.createElement("span");
     emoji.className = "tag-emoji";
     emoji.textContent = t.emoji;
@@ -332,10 +354,22 @@ function renderTags() {
     el.appendChild(emoji);
     el.appendChild(name);
     el.addEventListener("click", () => {
-      selectedTagID = t.id;
-      renderTags();
+      if (tagManageMode) {
+        openTagEditor(t);
+      } else {
+        selectedTagID = t.id;
+        renderTags();
+      }
     });
     row.appendChild(el);
+  }
+  if (tagManageMode) {
+    const addBtn = document.createElement("button");
+    addBtn.className = "tag tag-add";
+    addBtn.type = "button";
+    addBtn.textContent = "+ New tag";
+    addBtn.addEventListener("click", () => openTagEditor(null));
+    row.appendChild(addBtn);
   }
 }
 
@@ -366,6 +400,7 @@ function renderAll() {
   renderRock();
   renderTags();
   renderActionRow();
+  renderMomentum();
 }
 
 // ---------------- Focus session ----------------
@@ -414,17 +449,40 @@ function stopFocus() {
 
 function tick() {
   if (!isFocusing) return;
-  model.pixelAccumulator += PIXELS_PER_SECOND;
+  const { mult } = momentumFor(elapsed);
+  model.pixelAccumulator += PIXELS_PER_SECOND * mult;
   while (model.pixelAccumulator >= 1.0) {
     model.pixelAccumulator -= 1.0;
     pendingCount += 1;
   }
   elapsed += 1;
   updateTimer();
+  renderMomentum();
+  renderActionRow();
   if (plannedSeconds !== null && elapsed >= plannedSeconds) {
     stopFocus();
   }
-  renderActionRow();
+}
+
+function renderMomentum() {
+  const pill = document.getElementById("momentum-pill");
+  const pending = document.getElementById("pending-badge");
+  if (!isFocusing) {
+    pill.hidden = true;
+    pending.hidden = pendingCount === 0;
+    if (!pending.hidden) pending.textContent = `+${pendingCount} banked`;
+    return;
+  }
+  const { mult, label } = momentumFor(elapsed);
+  document.getElementById("m-tier").textContent = label;
+  document.getElementById("m-mult").textContent = `×${mult.toFixed(1)}`;
+  pill.hidden = false;
+  if (pendingCount > 0) {
+    pending.hidden = false;
+    pending.textContent = `+${pendingCount} banked`;
+  } else {
+    pending.hidden = true;
+  }
 }
 
 function updateTimer() {
@@ -564,19 +622,23 @@ function bindOnboarding() {
     pairBtn.disabled = true;
     pairBtn.textContent = "Pulling rock…";
     try {
-      const url = `${SUPABASE_URL}/rest/v1/${TABLE}?sync_id=eq.${encodeURIComponent(id)}&select=payload&limit=1`;
-      const res = await fetch(url, {
-        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` },
-      });
-      const rows = await res.json();
-      if (!Array.isArray(rows) || rows.length === 0) {
+      const res = await fetch(`${API_URL}?sync_id=${encodeURIComponent(id)}`);
+      if (res.status === 404) {
         pairError.textContent = "No rock found for that sync ID.";
         pairError.hidden = false;
         pairBtn.disabled = false;
         pairBtn.textContent = "Pair this device";
         return;
       }
-      const remote = rows[0].payload;
+      if (!res.ok) {
+        pairError.textContent = "Couldn't reach the server. Try again.";
+        pairError.hidden = false;
+        pairBtn.disabled = false;
+        pairBtn.textContent = "Pair this device";
+        return;
+      }
+      const body = await res.json();
+      const remote = body.payload;
       model = { ...emptyModel(), ...remote, syncID: id, cloudSyncEnabled: true };
       writeLocal(model);
       document.getElementById("onboarding").hidden = true;
@@ -623,6 +685,87 @@ function bindSettings() {
 
 // ---------------- Boot ----------------
 
+let editingTag = null;        // null = new tag
+let editingHue = 0.62;
+function openTagEditor(tag) {
+  editingTag = tag;
+  editingHue = tag ? tag.hue : 0.62;
+  document.getElementById("tag-sheet-title").textContent = tag ? "Edit tag" : "New tag";
+  document.getElementById("tag-emoji").value = tag ? tag.emoji : "🪨";
+  document.getElementById("tag-name").value = tag ? tag.name : "";
+  document.getElementById("tag-delete").hidden = !tag;
+  renderHueGrid();
+  document.getElementById("tag-sheet").hidden = false;
+}
+function closeTagEditor() {
+  document.getElementById("tag-sheet").hidden = true;
+  editingTag = null;
+}
+function renderHueGrid() {
+  const grid = document.getElementById("hue-swatch-grid");
+  grid.textContent = "";
+  for (const preset of ROCK_PRESETS) {
+    const sw = document.createElement("button");
+    sw.type = "button";
+    sw.className = "hue-swatch" + (Math.abs(preset.hue - editingHue) < 0.005 ? " selected" : "");
+    sw.style.background = hsvToRgb(preset.hue, 0.50, 0.72);
+    sw.title = preset.name;
+    const label = document.createElement("span");
+    label.className = "hue-swatch-label";
+    label.textContent = preset.name;
+    sw.appendChild(label);
+    sw.addEventListener("click", () => {
+      editingHue = preset.hue;
+      renderHueGrid();
+    });
+    grid.appendChild(sw);
+  }
+}
+function bindTagEditor() {
+  document.getElementById("manage-tags-btn").addEventListener("click", () => {
+    tagManageMode = !tagManageMode;
+    document.getElementById("manage-tags-btn").textContent = tagManageMode ? "Done" : "Manage";
+    renderTags();
+  });
+  document.getElementById("tag-close").addEventListener("click", closeTagEditor);
+  document.getElementById("tag-cancel").addEventListener("click", closeTagEditor);
+  document.getElementById("tag-sheet").addEventListener("click", (e) => {
+    if (e.target.id === "tag-sheet") closeTagEditor();
+  });
+  document.getElementById("tag-save").addEventListener("click", () => {
+    const emoji = document.getElementById("tag-emoji").value.trim() || "🪨";
+    const name = document.getElementById("tag-name").value.trim() || "Untitled";
+    if (editingTag) {
+      const idx = model.tags.findIndex((x) => x.id === editingTag.id);
+      if (idx >= 0) {
+        model.tags[idx] = { ...model.tags[idx], emoji, name, hue: editingHue };
+      }
+    } else {
+      const newTag = { id: crypto.randomUUID(), emoji, name, hue: editingHue };
+      model.tags.push(newTag);
+      if (!selectedTagID) selectedTagID = newTag.id;
+    }
+    writeLocal(model);
+    schedulePush();
+    closeTagEditor();
+    renderTags();
+    paletteCache.clear();
+    renderRock();
+  });
+  document.getElementById("tag-delete").addEventListener("click", () => {
+    if (!editingTag) return;
+    if (!confirm(`Delete the "${editingTag.name}" tag? Existing grains stay but become uncolored.`)) return;
+    model.tags = model.tags.filter((x) => x.id !== editingTag.id);
+    if (selectedTagID === editingTag.id) selectedTagID = model.tags[0]?.id || null;
+    writeLocal(model);
+    schedulePush();
+    closeTagEditor();
+    renderTags();
+    paletteCache.clear();
+    renderRock();
+  });
+}
+
 function bindFocusUI() {
   document.querySelectorAll(".chip").forEach((c) => {
     c.addEventListener("click", () => {
@@ -642,6 +785,7 @@ maybeShowOnboarding();
 bindOnboarding();
 bindSettings();
 bindFocusUI();
+bindTagEditor();
 renderAll();
 updateTimer();
 

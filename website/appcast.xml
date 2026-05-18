@@ -7,6 +7,23 @@
     <link>https://boulder-43p.pages.dev/appcast.xml</link>
     <description>Most recent Boulder releases.</description>
     <item>
+      <title>v1.9.0</title>
+      <pubDate>Mon, 18 May 2026 00:51:01 +0000</pubDate>
+      <sparkle:version>1.9.0</sparkle:version>
+      <sparkle:shortVersionString>1.9.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <b>Big migration:</b> swapped Supabase → Cloudflare D1 (no more deactivation emails). Web app now has full tag editor (custom emoji + name + 12 stone-preset hues) and live momentum multiplier. Settings button fixed — was opening behind the popover. For Gravy. 🪨
+      ]]></description>
+      <enclosure
+        url="https://github.com/bendawg2010/Boulder/releases/download/v1.9.0/Boulder.dmg"
+        sparkle:version="1.9.0"
+        sparkle:shortVersionString="1.9.0"
+        length="2361695"
+        type="application/octet-stream"
+        sparkle:edSignature="gJqq1w6Hn6jvIJMi4GBOyYaywOZy0GMQe8RPvucrkdxThvUeUkg43vMciJyj7c8c98wRmmqeQc+5ZsEWtQ9xBw==" />
+    </item>
+    <item>
       <title>v1.8.1</title>
       <pubDate>Mon, 18 May 2026 00:39:29 +0000</pubDate>
       <sparkle:version>1.8.1</sparkle:version>

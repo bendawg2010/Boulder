@@ -1,21 +1,18 @@
 // BoulderConfig.swift
 //
-// Supabase project coordinates for cloud sync. The publishable key is
-// scoped to anon-role reads/writes against the `boulders` table, so
-// it's safe to ship in the client binary. The auth model is "your
-// sync_id UUID is your secret" — see reference_boulder_supabase.md.
+// Cloud-sync endpoint coordinates. As of v1.9.0 the backend is a
+// Cloudflare Pages Function at boulder-43p.pages.dev/api/boulders
+// backed by a D1 (SQLite) database. No more Supabase — the old
+// project is being retired.
 
 import Foundation
 
 enum BoulderConfig {
-    /// Project: ujkvqwkdtcwnxueitepm — see memory.
-    static let supabaseURL = URL(string: "https://ujkvqwkdtcwnxueitepm.supabase.co")!
-
-    /// Publishable (anon) key. Safe to bundle in the client per
-    /// Supabase docs — RLS is what gates access, not key secrecy.
-    static let supabaseAnonKey =
-        "sb_publishable_NLjbb-i-mzAcO6G2h5zl6w_caxZ3kiY"
-
-    /// Table name we sync to.
-    static let bouldersTable = "boulders"
+    /// Cloudflare Pages Function — see website/functions/api/boulders.ts.
+    /// The function is deployed alongside the static site so it lives
+    /// at the same origin as the share + web-app routes.
+    static let backendBase = URL(string: "https://boulder-43p.pages.dev")!
+    static var bouldersEndpoint: URL {
+        backendBase.appendingPathComponent("/api/boulders")
+    }
 }

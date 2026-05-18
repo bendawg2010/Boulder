@@ -180,10 +180,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Settings window
 
     func openSettings() {
-        // Accessory-policy apps can't reliably bring their own windows
-        // forward — temporarily promote to .regular while a window is
-        // visible. We downgrade again when the last auxiliary window
-        // closes (see `windowsAuxClosed`).
+        // Close the popover FIRST. Buttons inside the popover don't
+        // cause it to lose focus on their own, so a new window opened
+        // from a popover-internal click ends up behind/under the
+        // popover and looks like "nothing happened."
+        if let popover, popover.isShown { popover.performClose(nil) }
+        DispatchQueue.main.async { [weak self] in self?.reallyOpenSettings() }
+    }
+
+    private func reallyOpenSettings() {
         promoteToRegularIfNeeded()
         if let win = settingsWindow {
             win.center()
@@ -214,6 +219,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Gallery window
 
     func openGallery() {
+        // Same popover-eats-focus fix as openSettings.
+        if let popover, popover.isShown { popover.performClose(nil) }
+        DispatchQueue.main.async { [weak self] in self?.reallyOpenGallery() }
+    }
+
+    private func reallyOpenGallery() {
         promoteToRegularIfNeeded()
         if let win = galleryWindow {
             win.center()

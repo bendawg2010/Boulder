@@ -27,7 +27,15 @@
       <section class="hero">
         <div class="tier" id="tier-name">Pebble</div>
         <div class="tier-sub" id="tier-sub">60 grains to Stone</div>
-        <div class="grain-count" id="grain-count">0 grains</div>
+        <div class="hero-row">
+          <span class="momentum" id="momentum-pill" hidden>
+            <span class="dot"></span>
+            <span class="m-tier" id="m-tier">Warming up</span>
+            <span class="m-mult" id="m-mult">×1.0</span>
+          </span>
+          <span class="pending-badge" id="pending-badge" hidden>+0 banked</span>
+          <span class="grain-count" id="grain-count">0 grains</span>
+        </div>
       </section>
 
       <section class="canvas-wrap">
@@ -48,7 +56,13 @@
         </button>
       </div>
 
-      <section class="tag-row" id="tag-row" aria-label="Pick a tag"></section>
+      <section class="tag-section">
+        <div class="tag-section-header">
+          <label class="field-label">Pick a tag</label>
+          <button class="tag-manage-btn" id="manage-tags-btn" type="button" aria-label="Manage tags">Manage</button>
+        </div>
+        <div class="tag-row" id="tag-row" aria-label="Pick a tag"></div>
+      </section>
 
       <section class="focus-block">
         <label class="field-label">What are you focusing on?</label>
@@ -103,6 +117,30 @@
         <button class="onb-pair-link" id="onb-show-new">
           Or start a new rock instead
         </button>
+      </div>
+    </div>
+
+    <!-- Tag editor sheet -->
+    <div class="sheet" id="tag-sheet" hidden>
+      <div class="sheet-card">
+        <button class="sheet-close" id="tag-close" aria-label="Close">×</button>
+        <h2 id="tag-sheet-title">Edit tag</h2>
+
+        <label class="field-label">Emoji</label>
+        <input id="tag-emoji" type="text" maxlength="4" placeholder="🪨" autocomplete="off" />
+
+        <label class="field-label" style="margin-top:14px">Name</label>
+        <input id="tag-name" type="text" placeholder="Code" autocomplete="off" />
+
+        <label class="field-label" style="margin-top:14px">Stone color</label>
+        <div class="hue-swatch-grid" id="hue-swatch-grid"></div>
+
+        <div class="tag-sheet-actions">
+          <button class="btn-small" id="tag-delete" type="button" hidden>Delete</button>
+          <div class="spacer"></div>
+          <button class="btn-small" id="tag-cancel" type="button">Cancel</button>
+          <button class="btn-primary-small" id="tag-save" type="button">Save</button>
+        </div>
       </div>
     </div>
 

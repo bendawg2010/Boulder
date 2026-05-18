@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/wrangler.json",
+  "name": "boulder",
+  "compatibility_date": "2026-05-01",
+  "pages_build_output_dir": ".",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "boulder",
+      "database_id": "6f44a467-3fc9-48e0-953b-d5fee720acfa"
+    }
+  ]
+}
